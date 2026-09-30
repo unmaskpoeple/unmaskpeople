@@ -1,0 +1,191 @@
+datasource db {
+  provider = "sqlite"
+  url      = env("DATABASE_URL")
+}
+
+generator client {
+  provider = "prisma-client-js"
+}
+
+model User {
+  id                 String              @id @default(cuid())
+  name               String
+  email              String              @unique
+  passwordHash       String
+  role               String              @default("USER") // "USER" | "ADMIN"
+  status             String              @default("ACTIVE") // "ACTIVE" | "DISABLED" | "SUSPENDED"
+  emailVerified         Boolean             @default(false)
+  verificationToken     String?             @unique
+  verificationExpires   DateTime?
+  referralCode          String?             @unique
+  successfulSearchCount Int                 @default(0)
+  createdAt             DateTime            @default(now())
+  updatedAt             DateTime            @updatedAt
+
+  wallet                Wallet?
+  walletTransactions    WalletTransaction[]
+  apiRequests           ApiRequest[]
+  payments              Payment[]
+  adminAuditLogs        AuditLog[]          @relation("AdminAudits")
+  referralsGiven        Referral[]          @relation("Referrer")
+  referralReceived      Referral?           @relation("ReferredUser")
+
+  @@index([email])
+  @@index([role])
+  @@index([status])
+  @@index([referralCode])
+  @@index([verificationToken])
+}
+
+model Wallet {
+  id        String   @id @default(cuid())
+  userId    String   @unique
+  user      User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  balance   Float    @default(0.0)
+  currency  String   @default("INR")
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+}
+
+model WalletTransaction {
+  id            String   @id @default(cuid())
+  userId        String
+  user          User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  type          String   // "DEPOSIT" | "API_CHARGE" | "REFUND" | "MANUAL_CREDIT" | "MANUAL_DEBIT"
+  amount        Float
+  balanceBefore Float
+  balanceAfter  Float
+  referenceId   String?  // Payment ID, Request ID, or Admin adjustment note
+  description   String
+  status        String   @default("SUCCESS") // "PENDING" | "SUCCESS" | "FAILED"
+  createdAt     DateTime @default(now())
+
+  @@index([userId])
+  @@index([type])
+  @@index([createdAt])
+}
+
+model ApiConfig {
+  id                  String       @id @default(cuid())
+  name                String
+  description         String?
+  endpoint            String
+  method              String       @default("POST") // GET | POST | PUT
+  authType            String       @default("NONE") // NONE | BEARER_TOKEN | API_KEY_HEADER | API_KEY_QUERY | CUSTOM_HEADER
+  authKeyName         String?      // e.g. "Authorization", "X-Api-Key", "api_key"
+  encryptedSecret     String?      // Server-side encrypted token/key
+  headers             String?      // JSON object of custom headers
+  requestTemplate     String?      // JSON string template
+  phoneParameter      String       @default("phone")
+  cost                Float        @default(5.0) // Cost per request in INR
+  timeout             Int          @default(10000) // Timeout in ms
+  isActive            Boolean      @default(true)
+  
+  // Dynamic Response Mapping
+  successField        String       @default("status")
+  successValues       String       @default("success,true,200,OK,valid")
+  messageField        String       @default("message")
+  resultField         String       @default("data")
+
+  // Health Monitoring
+  lastTestedAt        DateTime?
+  lastTestStatus      String?      // "HEALTHY" | "ERROR" | "TIMEOUT"
+  lastTestLatencyMs   Int?
+  lastTestError       String?
+
+  createdAt           DateTime     @default(now())
+  updatedAt           DateTime     @updatedAt
+
+  requests            ApiRequest[]
+}
+
+model ApiRequest {
+  id              String     @id @default(cuid())
+  userId          String
+  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  apiConfigId     String?
+  apiConfig       ApiConfig? @relation(fields: [apiConfigId], references: [id], onDelete: SetNull)
+  
+  phoneHash       String     // SHA-256 for integrity / lookup without plaintext exposure
+  maskedPhone     String     // e.g. +91 98*****3210
+  countryCode     String     @default("+91")
+  
+  status          String     @default("PENDING") // PENDING | PROCESSING | SUCCESSFUL | FAILED | REFUNDED
+  httpStatus      Int?
+  amountCharged   Float      @default(0.0)
+  isRefunded      Boolean    @default(false)
+  latencyMs       Int?
+  
+  rawResponse     String?    // Sanitized JSON string of response
+  sanitizedResult String?    // Extracted clean key-value summary
+  errorMessage    String?
+  ipAddress       String?
+  
+  createdAt       DateTime   @default(now())
+  completedAt     DateTime?
+
+  @@index([userId])
+  @@index([status])
+  @@index([phoneHash])
+  @@index([createdAt])
+}
+
+model Payment {
+  id               String   @id @default(cuid())
+  userId           String
+  user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  gateway          String   @default("GATEWAY_SIMULATOR") // "RAZORPAY" | "STRIPE" | "GATEWAY_SIMULATOR"
+  gatewayReference String   @unique
+  amount           Float
+  currency         String   @default("INR")
+  status           String   @default("PENDING") // PENDING | SUCCESSFUL | FAILED | REFUNDED
+  metadata         String?  // JSON string
+  createdAt        DateTime @default(now())
+  updatedAt        DateTime @updatedAt
+
+  @@index([userId])
+  @@index([status])
+  @@index([gatewayReference])
+}
+
+model AuditLog {
+  id         String   @id @default(cuid())
+  adminId    String?
+  admin      User?    @relation("AdminAudits", fields: [adminId], references: [id], onDelete: SetNull)
+  action     String   // "UPDATE_USER", "CREDIT_WALLET", "CREATE_API", "UPDATE_PRICING", etc.
+  targetType String   // "USER", "WALLET", "API_CONFIG", "PRICING", "SETTINGS"
+  targetId   String?
+  metadata   String?  // JSON string of audit payload
+  ipAddress  String?
+  createdAt  DateTime @default(now())
+
+  @@index([adminId])
+  @@index([action])
+  @@index([createdAt])
+}
+
+model SystemSetting {
+  key       String   @id
+  value     String   // Can store JSON or primitive values
+  updatedAt DateTime @updatedAt
+}
+
+model Referral {
+  id                    String    @id @default(cuid())
+  referrerId            String
+  referrer              User      @relation("Referrer", fields: [referrerId], references: [id], onDelete: Cascade)
+  referredUserId        String    @unique
+  referredUser          User      @relation("ReferredUser", fields: [referredUserId], references: [id], onDelete: Cascade)
+  referralCode          String
+  status                String    @default("PENDING") // "PENDING" | "COMPLETED" | "CANCELLED"
+  successfulSearchCount Int       @default(0)
+  requiredSearches      Int       @default(2)
+  rewardAmount          Float     @default(9.0)
+  rewardedAt            DateTime?
+  createdAt             DateTime  @default(now())
+  updatedAt             DateTime  @updatedAt
+
+  @@index([referrerId])
+  @@index([status])
+}
+
