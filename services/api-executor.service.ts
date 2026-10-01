@@ -59,12 +59,18 @@ export class ApiExecutorService {
     }
 
     const val = this.getNestedValue(data, config.successField);
-    const validTokens = (config.successValues || "success,true,200,ok,valid")
+    const validTokens = (config.successValues || "success,true,200,ok,valid,1")
       .split(",")
       .map((s) => s.trim().toLowerCase());
 
     const stringVal = String(val).toLowerCase();
-    const isSuccess = validTokens.includes(stringVal) || val === true || val === 200;
+    const isSuccess =
+      validTokens.includes(stringVal) ||
+      val === true ||
+      val === 200 ||
+      val === 1 ||
+      (typeof val === "number" && val > 0) ||
+      (Array.isArray(data?.data) && data.data.length > 0);
 
     const message =
       this.getNestedValue(data, config.messageField) ||

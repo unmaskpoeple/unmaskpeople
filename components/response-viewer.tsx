@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Check, Copy, ChevronDown, ChevronRight, Terminal, Layers, ShieldCheck, Clock, Zap } from "lucide-react";
+import { Check, Copy, ChevronDown, ChevronRight, Terminal, Layers, ShieldCheck, Clock, Zap, User, MapPin, Phone, Hash, Mail, CheckCircle2, UserCheck, Sparkles } from "lucide-react";
 import { useToast } from "./ui/toast";
 
 interface ResponseViewerProps {
@@ -194,27 +194,155 @@ export function ResponseViewer({
       <div className="p-5">
         {activeTab === "summary" ? (
           <div>
-            {Object.keys(data).length > 0 ? (
-              <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5">
-                {Object.entries(data).map(([k, v]) => (
-                  <div
-                    key={k}
-                    className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800/80 hover:border-indigo-500/30 transition-all"
-                  >
-                    <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                      {k}
-                    </p>
-                    <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 mt-1 break-words">
-                      {typeof v === "boolean" ? (v ? "True / Yes" : "False / No") : String(v)}
-                    </p>
-                  </div>
-                ))}
-              </div>
-            ) : (
-              <div className="py-8 text-center text-slate-500 dark:text-slate-400 text-sm">
-                No structured fields were extracted from this response. Check the Raw JSON tab for full details.
-              </div>
-            )}
+            {(() => {
+              // Extract subscriber records if present
+              const rawList = Array.isArray(raw?.data)
+                ? raw.data
+                : Array.isArray(data?.data)
+                ? data.data
+                : Array.isArray(raw)
+                ? raw
+                : Array.isArray(data)
+                ? data
+                : [];
+
+              const subscriberRecords =
+                rawList.length > 0
+                  ? rawList
+                  : (data?.name || data?.["Full Name"] || raw?.name)
+                  ? [
+                      {
+                        name: data?.name || data?.["Full Name"] || raw?.name,
+                        fname: data?.fname || data?.["Father's Name"] || raw?.fname,
+                        address: data?.address || data?.["Registered Address"] || raw?.address,
+                        mobile: data?.mobile || data?.["Mobile Number"] || raw?.mobile || phone,
+                        id: data?.id || data?.["Identity Number"] || raw?.id,
+                        email: data?.email || data?.["Email Address"] || raw?.email,
+                      },
+                    ]
+                  : [];
+
+              const skipKeys = new Set([
+                "name", "fname", "address", "id", "mobile", "email", "data", "found",
+                "Full Name", "Father's Name", "Registered Address", "Identity Number", "Mobile Number", "Email Address", "Records Found"
+              ]);
+
+              const otherEntries = Object.entries(data).filter(([k]) => !skipKeys.has(k));
+
+              return (
+                <div className="space-y-5">
+                  {/* Subscriber Profile Cards */}
+                  {subscriberRecords.length > 0 && (
+                    <div className="space-y-4">
+                      {subscriberRecords.map((rec: any, idx: number) => {
+                        const cleanAddr = rec.address
+                          ? String(rec.address).replace(/!+/g, ", ").replace(/^[\s,]+|[\s,]+$/g, "").trim()
+                          : "";
+                        return (
+                          <div
+                            key={idx}
+                            className="p-5 rounded-2xl bg-gradient-to-br from-slate-900/95 via-slate-950/90 to-slate-900/95 border border-indigo-500/40 shadow-2xl relative overflow-hidden backdrop-blur-xl"
+                          >
+                            <div className="absolute top-0 right-0 w-64 h-64 bg-indigo-500/10 rounded-full blur-3xl pointer-events-none" />
+                            <div className="flex flex-wrap items-center justify-between gap-3 pb-4 border-b border-slate-800/80">
+                              <div className="flex items-center gap-3">
+                                <div className="w-11 h-11 rounded-2xl bg-gradient-to-br from-cyan-500 to-indigo-600 flex items-center justify-center text-white shadow-lg shadow-cyan-500/20 font-black text-lg">
+                                  {rec.name ? String(rec.name).charAt(0).toUpperCase() : <User className="w-5 h-5" />}
+                                </div>
+                                <div>
+                                  <div className="flex items-center gap-2">
+                                    <h3 className="text-lg font-black text-white tracking-wide">
+                                      {rec.name || "Verified Subscriber"}
+                                    </h3>
+                                    <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
+                                      <CheckCircle2 className="w-3 h-3 text-emerald-400" />
+                                      <span>Matched</span>
+                                    </span>
+                                  </div>
+                                  {rec.fname && (
+                                    <p className="text-xs text-slate-400 font-medium mt-0.5">
+                                      Father: <span className="text-slate-200 font-bold">{rec.fname}</span>
+                                    </p>
+                                  )}
+                                </div>
+                              </div>
+
+                              {rec.id && (
+                                <div className="flex items-center gap-2 bg-slate-950 border border-slate-800/90 px-3.5 py-1.5 rounded-xl font-mono text-xs shadow-inner">
+                                  <Hash className="w-3.5 h-3.5 text-cyan-400" />
+                                  <span className="text-slate-400 text-[11px] font-semibold">ID:</span>
+                                  <span className="text-cyan-300 font-bold tracking-wider">{rec.id}</span>
+                                </div>
+                              )}
+                            </div>
+
+                            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4 pt-4 text-xs">
+                              <div className="flex items-start gap-3 bg-slate-950/60 p-3 rounded-xl border border-slate-800/60">
+                                <Phone className="w-4 h-4 text-emerald-400 mt-0.5 shrink-0" />
+                                <div>
+                                  <p className="text-[11px] text-slate-500 uppercase tracking-wider font-bold">Registered Mobile</p>
+                                  <p className="font-mono font-bold text-slate-100 text-sm mt-0.5">{rec.mobile || phone}</p>
+                                </div>
+                              </div>
+
+                              <div className="flex items-start gap-3 bg-slate-950/60 p-3 rounded-xl border border-slate-800/60">
+                                <Mail className="w-4 h-4 text-violet-400 mt-0.5 shrink-0" />
+                                <div>
+                                  <p className="text-[11px] text-slate-500 uppercase tracking-wider font-bold">Email Address</p>
+                                  <p className="font-mono text-slate-300 mt-0.5">{rec.email || "Not Provided"}</p>
+                                </div>
+                              </div>
+
+                              {cleanAddr && (
+                                <div className="sm:col-span-2 flex items-start gap-3 bg-slate-950/70 p-3.5 rounded-xl border border-slate-800">
+                                  <MapPin className="w-4 h-4 text-rose-400 mt-0.5 shrink-0" />
+                                  <div className="flex-1">
+                                    <p className="text-[11px] text-slate-500 uppercase tracking-wider font-bold">Registered Address</p>
+                                    <p className="text-slate-200 font-medium leading-relaxed mt-1 break-words">{cleanAddr}</p>
+                                  </div>
+                                </div>
+                              )}
+                            </div>
+                          </div>
+                        );
+                      })}
+                    </div>
+                  )}
+
+                  {/* Telecom or other additional intelligence */}
+                  {otherEntries.length > 0 && (
+                    <div className="space-y-2">
+                      {subscriberRecords.length > 0 && (
+                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 pt-2">
+                          Additional Telecom Intelligence
+                        </h4>
+                      )}
+                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5">
+                        {otherEntries.map(([k, v]) => (
+                          <div
+                            key={k}
+                            className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800/80 hover:border-indigo-500/30 transition-all"
+                          >
+                            <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
+                              {k}
+                            </p>
+                            <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 mt-1 break-words">
+                              {typeof v === "boolean" ? (v ? "True / Yes" : "False / No") : String(v)}
+                            </p>
+                          </div>
+                        ))}
+                      </div>
+                    </div>
+                  )}
+
+                  {subscriberRecords.length === 0 && otherEntries.length === 0 && (
+                    <div className="py-8 text-center text-slate-500 dark:text-slate-400 text-sm">
+                      No structured fields were extracted from this response. Check the Raw JSON tab for full details.
+                    </div>
+                  )}
+                </div>
+              );
+            })()}
           </div>
         ) : (
           <div className="p-4 rounded-xl bg-slate-950 border border-slate-800 font-mono text-xs overflow-x-auto text-slate-200">

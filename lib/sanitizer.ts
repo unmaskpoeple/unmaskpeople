@@ -70,20 +70,52 @@ export function sanitizeData(data: any, secretToScrub?: string): any {
 export function extractKeyValueSummary(obj: any, maxDepth = 2, currentDepth = 0): Record<string, string | number | boolean> {
   const result: Record<string, string | number | boolean> = {};
 
-  if (!obj || typeof obj !== "object" || currentDepth > maxDepth) {
+  if (!obj || currentDepth > maxDepth) {
     return result;
+  }
+
+  // If passed an array of records, unwrap the first record or items
+  if (Array.isArray(obj)) {
+    if (obj.length === 0) return result;
+    return extractKeyValueSummary(obj[0], maxDepth, currentDepth);
+  }
+
+  if (typeof obj !== "object") {
+    return result;
+  }
+
+  // If wrapped in { found: 1, data: [ ... ] }, extract the inner record
+  if (obj.data && (Array.isArray(obj.data) || typeof obj.data === "object")) {
+    const inner = extractKeyValueSummary(obj.data, maxDepth, currentDepth);
+    Object.assign(result, inner);
   }
 
   for (const [k, v] of Object.entries(obj)) {
     if (v === null || v === undefined) continue;
+    if (k === "data" && (Array.isArray(v) || typeof v === "object")) continue;
 
-    const formattedKey = k
+    let formattedKey = k
       .replace(/_/g, " ")
       .replace(/([A-Z])/g, " $1")
       .trim()
       .replace(/^./, (str) => str.toUpperCase());
 
-    if (typeof v === "string" || typeof v === "number" || typeof v === "boolean") {
+    // Custom friendly labels
+    if (k.toLowerCase() === "fname") formattedKey = "Father's Name";
+    if (k.toLowerCase() === "id") formattedKey = "Identity Number";
+    if (k.toLowerCase() === "mobile") formattedKey = "Mobile Number";
+    if (k.toLowerCase() === "name") formattedKey = "Full Name";
+    if (k.toLowerCase() === "address") formattedKey = "Registered Address";
+    if (k.toLowerCase() === "found") formattedKey = "Records Found";
+
+    if (typeof v === "string") {
+      // Clean up exclamation-separated addresses
+      let val = v;
+      if (k.toLowerCase() === "address") {
+        val = val.replace(/!+/g, ", ").replace(/^[\s,]+|[\s,]+$/g, "").trim();
+      }
+      result[formattedKey] = val;
+    } else if (typeof v === "number" || typeof v === "boolean") {
       result[formattedKey] = v;
     } else if (typeof v === "object" && !Array.isArray(v) && currentDepth < maxDepth) {
       const nested = extractKeyValueSummary(v, maxDepth, currentDepth + 1);
@@ -95,3 +127,4 @@ export function extractKeyValueSummary(obj: any, maxDepth = 2, currentDepth = 0)
 
   return result;
 }
+
