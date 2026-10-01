@@ -1,4 +1,6 @@
 import prisma from "@/lib/prisma";
+import { db } from "@/lib/firebase";
+import { collection, addDoc } from "firebase/firestore";
 
 export interface CreateAuditLogParams {
   adminId?: string;
@@ -11,6 +13,22 @@ export interface CreateAuditLogParams {
 
 export class AuditService {
   static async record(params: CreateAuditLogParams) {
+    if (db) {
+      try {
+        await addDoc(collection(db, "audit_logs"), {
+          adminId: params.adminId || null,
+          action: params.action,
+          targetType: params.targetType,
+          targetId: params.targetId || null,
+          metadata: params.metadata || {},
+          ipAddress: params.ipAddress || "127.0.0.1",
+          createdAt: new Date().toISOString(),
+        });
+      } catch (e) {
+        // Safe Firestore logging fallback
+      }
+    }
+
     try {
       return await prisma.auditLog.create({
         data: {
@@ -23,7 +41,6 @@ export class AuditService {
         },
       });
     } catch (err) {
-      console.error("Failed to write audit log:", err);
       return null;
     }
   }
