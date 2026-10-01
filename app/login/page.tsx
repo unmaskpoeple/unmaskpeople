@@ -21,8 +21,8 @@ export default function LoginPage() {
   const { login } = useAuth();
   const { toast } = useToast();
 
-  const [email, setEmail] = useState("demo@unmaskpeople.in");
-  const [password, setPassword] = useState("UserPassword123!");
+  const [email, setEmail] = useState("");
+  const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
   const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
@@ -89,17 +89,6 @@ export default function LoginPage() {
     } finally {
       setResending(false);
     }
-  };
-
-  const handleUseDemoCreds = (type: "user" | "admin") => {
-    if (type === "user") {
-      setEmail("demo@unmaskpeople.in");
-      setPassword("UserPassword123!");
-    } else {
-      setEmail("admin@unmaskpeople.in");
-      setPassword("AdminPassword123!");
-    }
-    setErrorMsg("");
   };
 
   return (
@@ -243,30 +232,7 @@ export default function LoginPage() {
             </button>
           </form>
 
-          {/* Quick 1-Click Credentials Tester */}
-          <div className="mt-6 pt-5 border-t border-slate-800 space-y-2">
-            <span className="text-[11px] font-bold text-slate-400 uppercase tracking-wider block text-center">
-              Quick Test Credentials
-            </span>
-            <div className="grid grid-cols-2 gap-2 text-xs">
-              <button
-                type="button"
-                onClick={() => handleUseDemoCreds("user")}
-                className="py-2 px-3 rounded-xl border border-slate-800 bg-slate-950/60 hover:bg-slate-800/60 text-slate-300 font-medium transition-colors text-center"
-              >
-                Demo Subscriber
-              </button>
-              <button
-                type="button"
-                onClick={() => handleUseDemoCreds("admin")}
-                className="py-2 px-3 rounded-xl border border-slate-800 bg-slate-950/60 hover:bg-slate-800/60 text-slate-300 font-medium transition-colors text-center"
-              >
-                Root Admin
-              </button>
-            </div>
-          </div>
-
-          <div className="mt-5 text-center text-xs text-slate-400">
+          <div className="mt-6 text-center text-xs text-slate-400">
             Don't have an account yet?{" "}
             <Link
               href="/register"

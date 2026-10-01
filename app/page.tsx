@@ -16,12 +16,9 @@ import {
   CreditCard,
   Zap,
   Lock,
-  Gift,
-  Share2,
 } from "lucide-react";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useToast } from "@/components/ui/toast";
-import { ReferralModal } from "@/components/referral-modal";
 import { SiteFooter } from "@/components/site-footer";
 import { BrandLogo } from "@/components/brand-logo";
 
@@ -37,9 +34,6 @@ export default function ServicesHubPage() {
   const [customAmount, setCustomAmount] = useState("");
   const [isCustom, setIsCustom] = useState(false);
   const [recharging, setRecharging] = useState(false);
-
-  // Referral Modal State
-  const [showReferralModal, setShowReferralModal] = useState(false);
 
   // Guest Prompt Modal
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
@@ -201,18 +195,8 @@ export default function ServicesHubPage() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between gap-4">
           <BrandLogo href="/" size="md" />
 
-          {/* Top Controls: Refer & Earn, Add Money, Login / Logout */}
+          {/* Top Controls: Add Money, Login / Logout */}
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Refer & Earn Button */}
-            <button
-              type="button"
-              onClick={() => setShowReferralModal(true)}
-              className="px-3 sm:px-4 py-2 rounded-xl bg-violet-950/70 border border-violet-800/60 hover:border-violet-500/80 text-violet-300 hover:text-white font-extrabold text-xs transition-all flex items-center gap-1.5 shadow-sm hover:scale-105 active:scale-95"
-            >
-              <Gift className="w-3.5 h-3.5 text-violet-400" />
-              <span>Refer & Earn ₹9</span>
-            </button>
-
             {user ? (
               <div className="flex items-center gap-2 bg-slate-900/80 border border-slate-800/90 rounded-2xl p-1.5 shadow-inner">
                 <div className="px-3 py-1 text-xs font-mono font-bold text-slate-300 hidden sm:flex items-center gap-1.5">
@@ -273,7 +257,7 @@ export default function ServicesHubPage() {
             <span className="gradient-letter-cyan">Services</span>
           </h1>
           <p className="text-xs sm:text-sm font-semibold tracking-wide text-slate-400 max-w-lg mx-auto">
-            Choose a verification service below or invite friends to earn ₹9.00
+            Instant carrier routing diagnostics, telecom circle identification, and live HLR status
           </p>
         </div>
 

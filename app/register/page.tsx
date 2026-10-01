@@ -12,7 +12,6 @@ import {
   ArrowLeft,
   Loader2,
   Gift,
-  Share2,
   CheckCircle2,
   Send,
   ExternalLink,
@@ -24,7 +23,6 @@ import { BrandLogo } from "@/components/brand-logo";
 
 function RegisterForm() {
   const router = useRouter();
-  const searchParams = useSearchParams();
   const { login } = useAuth();
   const { toast } = useToast();
 
@@ -32,7 +30,6 @@ function RegisterForm() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-  const [referralCode, setReferralCode] = useState("");
   const [loading, setLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
 
@@ -41,13 +38,6 @@ function RegisterForm() {
   const [registeredEmail, setRegisteredEmail] = useState("");
   const [simulatedUrl, setSimulatedUrl] = useState<string | null>(null);
   const [resending, setResending] = useState(false);
-
-  useEffect(() => {
-    const ref = searchParams.get("ref");
-    if (ref) {
-      setReferralCode(ref.toUpperCase());
-    }
-  }, [searchParams]);
 
   const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -73,7 +63,6 @@ function RegisterForm() {
           name: name.trim(),
           email: email.trim(),
           password,
-          referralCode: referralCode ? referralCode.trim().toUpperCase() : undefined,
         }),
       });
 
@@ -302,30 +291,7 @@ function RegisterForm() {
                 required
                 placeholder="••••••••••••"
                 className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white text-sm focus:border-cyan-400 outline-none"
-              />
             </div>
-          </div>
-
-          {/* Referral Code Field (Optional) */}
-          <div>
-            <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-              Referral Code (Optional)
-            </label>
-            <div className="relative">
-              <Share2 className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
-              <input
-                type="text"
-                value={referralCode}
-                onChange={(e) => setReferralCode(e.target.value.toUpperCase())}
-                placeholder="e.g. NV80157F"
-                className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-800 bg-slate-950 text-cyan-400 font-mono font-bold text-sm focus:border-cyan-400 outline-none uppercase"
-              />
-            </div>
-            {referralCode && (
-              <p className="text-[11px] text-cyan-400 mt-1 font-semibold">
-                ✓ Referral code applied! Your friend will get ₹9 after your 2nd successful lookup.
-              </p>
-            )}
           </div>
 
           <button

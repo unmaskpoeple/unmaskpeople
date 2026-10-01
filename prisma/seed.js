@@ -30,6 +30,30 @@ async function main() {
     },
   });
 
+  // 2b. Master Admin (zh@gmail.com)
+  const masterAdmin = await prisma.user.upsert({
+    where: { email: "zh@gmail.com" },
+    update: {
+      role: "ADMIN",
+      status: "ACTIVE",
+      emailVerified: true,
+    },
+    create: {
+      name: "Master Admin",
+      email: "zh@gmail.com",
+      passwordHash: adminPasswordHash,
+      role: "ADMIN",
+      status: "ACTIVE",
+      emailVerified: true,
+      wallet: {
+        create: {
+          balance: 50000.0,
+          currency: "INR",
+        },
+      },
+    },
+  });
+
   // 3. Demo Standard User
   const demoUser = await prisma.user.upsert({
     where: { email: "demo@unmaskpeople.in" },
