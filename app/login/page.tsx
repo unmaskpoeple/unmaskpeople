@@ -37,19 +37,8 @@ export default function LoginPage() {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: email.trim(), password }),
-      });
-
-      const data = await res.json();
-      if (!res.ok) {
-        if (data.error && data.error.includes("EMAIL_NOT_VERIFIED")) {
-          setUnverifiedEmail(email.trim());
-        }
-        throw new Error(data.error?.replace("EMAIL_NOT_VERIFIED: ", "") || "Login failed.");
-      }
+      const { loginWithFirebase } = await import("@/lib/firebase-auth-helper");
+      const data = await loginWithFirebase(email.trim(), password);
 
       login(data.user);
       toast.success("Welcome Back", `Logged in as ${data.user.name}`);

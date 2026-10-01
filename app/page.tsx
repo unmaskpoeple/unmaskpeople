@@ -302,45 +302,7 @@ export default function ServicesHubPage() {
           })}
         </div>
 
-        {/* Refer & Earn Banner Card */}
-        <div className="w-full max-w-4xl p-6 sm:p-8 rounded-3xl bg-gradient-to-r from-violet-950/70 via-slate-900/90 to-fuchsia-950/70 border border-violet-800/50 shadow-2xl backdrop-blur-2xl flex flex-col sm:flex-row items-center justify-between gap-6 relative overflow-hidden group">
-          <div className="absolute -right-20 -bottom-20 w-64 h-64 bg-violet-600/10 rounded-full blur-3xl pointer-events-none" />
-
-          <div className="flex items-center gap-4">
-            <div className="w-14 h-14 rounded-2xl bg-violet-900/80 border border-violet-700/60 text-violet-300 flex items-center justify-center shadow-lg shadow-violet-500/20 shrink-0">
-              <Gift className="w-7 h-7" />
-            </div>
-            <div className="space-y-1">
-              <div className="flex items-center gap-2">
-                <h3 className="text-lg sm:text-xl font-black text-white">
-                  Refer & Earn <span className="gradient-letter">₹9.00</span> per Friend
-                </h3>
-                <span className="text-[10px] font-mono font-bold bg-violet-500/20 text-violet-300 border border-violet-500/30 px-2 py-0.5 rounded-full">
-                  Instant Wallet Cash
-                </span>
-              </div>
-              <p className="text-xs text-slate-300 leading-relaxed max-w-xl">
-                Friends get <strong className="text-emerald-400">₹15.00</strong> welcome credit. You receive <strong className="text-violet-300">₹9.00</strong> when they complete 2 successful searches.
-              </p>
-            </div>
-          </div>
-
-          <button
-            type="button"
-            onClick={() => setShowReferralModal(true)}
-            className="px-6 py-3 rounded-2xl bg-gradient-to-r from-violet-600 via-fuchsia-600 to-pink-600 hover:opacity-95 text-white font-extrabold text-xs shadow-lg shadow-violet-600/30 flex items-center gap-2 shrink-0 hover:scale-105 active:scale-95 transition-all"
-          >
-            <Share2 className="w-4 h-4" />
-            <span>Get Referral Code</span>
-          </button>
-        </div>
       </main>
-
-      {/* Refer & Earn Modal */}
-      <ReferralModal
-        isOpen={showReferralModal}
-        onClose={() => setShowReferralModal(false)}
-      />
 
       {/* Add Money Modal (with Live / Simulator Razorpay Integration) */}
       {showAddMoneyModal && (

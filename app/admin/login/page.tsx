@@ -23,19 +23,11 @@ export default function AdminLoginPage() {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/auth/login", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          email: email.trim(),
-          password,
-          requiredRole: "ADMIN",
-        }),
-      });
+      const { loginWithFirebase } = await import("@/lib/firebase-auth-helper");
+      const data = await loginWithFirebase(email.trim(), password);
 
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Administrative authentication failed.");
+      if (data.user.role !== "ADMIN") {
+        throw new Error("Access denied. This account does not possess administrator privileges.");
       }
 
       login(data.user);

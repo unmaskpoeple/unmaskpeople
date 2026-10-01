@@ -56,34 +56,17 @@ function RegisterForm() {
     setLoading(true);
 
     try {
-      const res = await fetch("/api/auth/register", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({
-          name: name.trim(),
-          email: email.trim(),
-          password,
-        }),
-      });
+      const { registerWithFirebase } = await import("@/lib/firebase-auth-helper");
+      const data = await registerWithFirebase(name.trim(), email.trim(), password);
 
-      const data = await res.json();
-      if (!res.ok) {
-        throw new Error(data.error || "Registration failed.");
-      }
-
-      if (data.requiresVerification) {
-        setRegisteredEmail(email.trim());
-        setSimulatedUrl(data.simulatedActivationUrl || null);
-        setVerificationPending(true);
-        toast.success(
-          "Activation Link Sent",
-          `Please check ${email.trim()} to activate your account and claim ₹15.00 credit.`
-        );
+      login(data.user);
+      if (data.user.role === "ADMIN") {
+        toast.success("Master Admin Account Ready", "Welcome to UnMaskPeople.in Administrator Console.");
+        router.push("/admin");
       } else {
-        login(data.user);
         toast.success(
           "Account Created Successfully!",
-          "₹15.00 promotional welcome credits have been deposited to your wallet."
+          "₹50.00 promotional welcome credits deposited to your wallet."
         );
         router.push("/");
       }
@@ -291,6 +274,7 @@ function RegisterForm() {
                 required
                 placeholder="••••••••••••"
                 className="w-full pl-10 pr-4 py-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white text-sm focus:border-cyan-400 outline-none"
+              />
             </div>
           </div>
 

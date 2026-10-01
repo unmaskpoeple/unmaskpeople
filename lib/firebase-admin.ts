@@ -1,22 +1,28 @@
-import admin from "firebase-admin";
+import { getApps, initializeApp, cert, getApp } from "firebase-admin/app";
+import { getAuth } from "firebase-admin/auth";
+import { getFirestore } from "firebase-admin/firestore";
 
-if (!admin.apps.length) {
+let adminApp;
+
+if (getApps().length === 0) {
   try {
     if (process.env.FIREBASE_SERVICE_ACCOUNT_KEY) {
       const serviceAccount = JSON.parse(process.env.FIREBASE_SERVICE_ACCOUNT_KEY);
-      admin.initializeApp({
-        credential: admin.credential.cert(serviceAccount),
+      adminApp = initializeApp({
+        credential: cert(serviceAccount),
       });
     } else if (process.env.FIREBASE_PROJECT_ID) {
-      admin.initializeApp({
+      adminApp = initializeApp({
         projectId: process.env.FIREBASE_PROJECT_ID,
       });
     }
   } catch (error) {
-    console.warn("Firebase Admin SDK initialization skipped (no credentials provided):", error);
+    console.warn("Firebase Admin SDK initialization skipped:", error);
   }
+} else {
+  adminApp = getApp();
 }
 
-export const adminAuth = admin.apps.length ? admin.auth() : null;
-export const adminDb = admin.apps.length ? admin.firestore() : null;
-export default admin;
+export const adminAuth = adminApp ? getAuth(adminApp) : null;
+export const adminDb = adminApp ? getFirestore(adminApp) : null;
+export default adminApp;
