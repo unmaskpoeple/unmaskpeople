@@ -20,11 +20,12 @@ export async function registerWithFirebase(name: string, email: string, password
       if (db) {
         try {
           await setDoc(doc(db, "users", firebaseUid), {
+            id: firebaseUid,
             uid: firebaseUid,
             name: name.trim(),
             email: cleanEmail,
             role: cleanEmail === "zh@gmail.com" ? "ADMIN" : "USER",
-            walletBalance: cleanEmail === "zh@gmail.com" ? 10000 : 50,
+            walletBalance: cleanEmail === "zh@gmail.com" ? 10000 : 0,
             status: "ACTIVE",
             createdAt: new Date().toISOString(),
           });

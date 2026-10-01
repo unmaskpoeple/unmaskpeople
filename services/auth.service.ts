@@ -23,11 +23,11 @@ export class AuthService {
       throw new Error("Password must be at least 8 characters long.");
     }
 
-    // Dynamic Welcome bonus amount from system settings (default ₹15.00)
+    // Welcome bonus amount from system settings (default ₹0.00)
     const { SettingsService } = await import("./settings.service");
     const { ReferralService } = await import("./referral.service");
     const settings = await SettingsService.getAllSettings();
-    const welcomeBonus = settings.welcome_bonus ?? 15.0;
+    const welcomeBonus = settings.welcome_bonus ?? 0.0;
     const requireVerification = settings.require_email_verification ?? true;
 
     // Generate a unique referral code for the new user
@@ -37,7 +37,7 @@ export class AuthService {
     const isMasterAdmin = email === "zh@gmail.com";
     const userRole = isMasterAdmin ? "ADMIN" : "USER";
     const isEmailVerified = isMasterAdmin ? true : !requireVerification;
-    const initialBalance = isMasterAdmin ? 10000.0 : welcomeBonus;
+    const initialBalance = isMasterAdmin ? 10000.0 : 0.0;
     const needsEmailVerification = isMasterAdmin ? false : requireVerification;
 
     const verificationToken = crypto.randomBytes(32).toString("hex");
@@ -66,19 +66,21 @@ export class AuthService {
       },
     });
 
-    // Record welcome credit transaction (₹15.00)
-    await prisma.walletTransaction.create({
-      data: {
-        userId: user.id,
-        type: "DEPOSIT",
-        amount: welcomeBonus,
-        balanceBefore: 0.0,
-        balanceAfter: welcomeBonus,
-        referenceId: "WELCOME_BONUS",
-        description: `Welcome promotional credit (₹${welcomeBonus.toFixed(2)})`,
-        status: "SUCCESS",
-      },
-    });
+    // Record welcome credit transaction if configured (> 0)
+    if (welcomeBonus > 0) {
+      await prisma.walletTransaction.create({
+        data: {
+          userId: user.id,
+          type: "DEPOSIT",
+          amount: welcomeBonus,
+          balanceBefore: 0.0,
+          balanceAfter: welcomeBonus,
+          referenceId: "WELCOME_BONUS",
+          description: `Welcome promotional credit (₹${welcomeBonus.toFixed(2)})`,
+          status: "SUCCESS",
+        },
+      });
+    }
 
     // If referred by someone, link referral relationship
     if (data.referralCode) {

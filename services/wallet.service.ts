@@ -1,4 +1,6 @@
 import prisma from "@/lib/prisma";
+import { db } from "@/lib/firebase";
+import { doc, getDoc, updateDoc } from "firebase/firestore";
 
 export interface WalletOperationResult {
   success: boolean;
@@ -13,21 +15,51 @@ export class WalletService {
    * Get user wallet by userId
    */
   static async getWallet(userId: string) {
-    let wallet = await prisma.wallet.findUnique({
-      where: { userId },
-    });
-
-    if (!wallet) {
-      wallet = await prisma.wallet.create({
-        data: {
-          userId,
-          balance: 0.0,
-          currency: "INR",
-        },
-      });
+    // 1. Try Cloud Firestore (Primary online source of truth)
+    if (db) {
+      try {
+        const userDocRef = doc(db, "users", userId);
+        const userSnap = await getDoc(userDocRef);
+        if (userSnap.exists()) {
+          const data = userSnap.data();
+          return {
+            id: `wallet_${userId}`,
+            userId,
+            balance: data.walletBalance ?? 0.0,
+            currency: "INR",
+          };
+        }
+      } catch (fsErr) {
+        console.warn("Firestore getWallet fallback:", fsErr);
+      }
     }
 
-    return wallet;
+    // 2. Try Prisma SQLite (Local fallback)
+    try {
+      let wallet = await prisma.wallet.findUnique({
+        where: { userId },
+      });
+
+      if (!wallet) {
+        wallet = await prisma.wallet.create({
+          data: {
+            userId,
+            balance: 0.0,
+            currency: "INR",
+          },
+        });
+      }
+      return wallet;
+    } catch (e) {
+      // Prisma missing on serverless
+    }
+
+    return {
+      id: `wallet_${userId}`,
+      userId,
+      balance: 0.0,
+      currency: "INR",
+    };
   }
 
   /**
@@ -41,35 +73,85 @@ export class WalletService {
   }): Promise<WalletOperationResult> {
     const { userId, amount, referenceId, description } = params;
 
-    return await prisma.$transaction(async (tx) => {
-      // Find wallet
-      let wallet = await tx.wallet.findUnique({
-        where: { userId },
-      });
+    // 1. Check & Charge Cloud Firestore
+    if (db) {
+      try {
+        const userDocRef = doc(db, "users", userId);
+        const userSnap = await getDoc(userDocRef);
+        if (userSnap.exists()) {
+          const data = userSnap.data();
+          const currentBal = Number((data.walletBalance ?? 0.0).toFixed(2));
+          if (currentBal < amount) {
+            return {
+              success: false,
+              balanceBefore: currentBal,
+              balanceAfter: currentBal,
+              error: `Insufficient wallet balance. Required: ₹${amount.toFixed(2)}, Available: ₹${currentBal.toFixed(2)}. Please recharge your wallet.`,
+            };
+          }
 
-      if (!wallet) {
-        wallet = await tx.wallet.create({
-          data: { userId, balance: 0.0, currency: "INR" },
+          const newBal = Number((currentBal - amount).toFixed(2));
+          await updateDoc(userDocRef, { walletBalance: newBal });
+
+          // Also try recording locally in Prisma if available
+          try {
+            await prisma.walletTransaction.create({
+              data: {
+                userId,
+                type: "API_CHARGE",
+                amount,
+                balanceBefore: currentBal,
+                balanceAfter: newBal,
+                referenceId,
+                description,
+                status: "SUCCESS",
+              },
+            });
+          } catch (e) {
+            // Prisma optional on serverless
+          }
+
+          return {
+            success: true,
+            balanceBefore: currentBal,
+            balanceAfter: newBal,
+            transactionId: `tx_${Date.now()}`,
+          };
+        }
+      } catch (fsErr) {
+        console.warn("Firestore charge error:", fsErr);
+      }
+    }
+
+    // 2. Fallback to Prisma Transaction if Firestore not available
+    try {
+      return await prisma.$transaction(async (tx) => {
+        let wallet = await tx.wallet.findUnique({
+          where: { userId },
         });
-      }
 
-      if (wallet.balance < amount) {
-        return {
-          success: false,
-          balanceBefore: wallet.balance,
-          balanceAfter: wallet.balance,
-          error: `Insufficient wallet balance. Required: ₹${amount.toFixed(2)}, Available: ₹${wallet.balance.toFixed(2)}. Please recharge your wallet.`,
-        };
-      }
+        if (!wallet) {
+          wallet = await tx.wallet.create({
+            data: { userId, balance: 0.0, currency: "INR" },
+          });
+        }
 
-      const balanceBefore = wallet.balance;
-      const balanceAfter = Number((balanceBefore - amount).toFixed(2));
+        if (wallet.balance < amount) {
+          return {
+            success: false,
+            balanceBefore: wallet.balance,
+            balanceAfter: wallet.balance,
+            error: `Insufficient wallet balance. Required: ₹${amount.toFixed(2)}, Available: ₹${wallet.balance.toFixed(2)}. Please recharge your wallet.`,
+          };
+        }
 
-      // Update wallet balance atomically
-      await tx.wallet.update({
-        where: { id: wallet.id },
-        data: { balance: balanceAfter },
-      });
+        const balanceBefore = wallet.balance;
+        const balanceAfter = Number((balanceBefore - amount).toFixed(2));
+
+        await tx.wallet.update({
+          where: { id: wallet.id },
+          data: { balance: balanceAfter },
+        });
 
       // Record transaction
       const transaction = await tx.walletTransaction.create({
@@ -85,13 +167,21 @@ export class WalletService {
         },
       });
 
+        return {
+          success: true,
+          balanceBefore,
+          balanceAfter,
+          transactionId: transaction.id,
+        };
+      });
+    } catch (e: any) {
       return {
-        success: true,
-        balanceBefore,
-        balanceAfter,
-        transactionId: transaction.id,
+        success: false,
+        balanceBefore: 0,
+        balanceAfter: 0,
+        error: e.message || "Wallet charge failed.",
       };
-    });
+    }
   }
 
   /**

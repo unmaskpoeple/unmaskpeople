@@ -56,9 +56,9 @@ const DEFAULT_SETTINGS: SystemSettingsMap = {
   webhook_secret: "whsec_unmaskpeople_mock_webhook_key_xyz",
 
   // Defaults as per user requirements
-  welcome_bonus: 15.0,
-  referral_enabled: true,
-  referral_bonus: 9.0,
+  welcome_bonus: 0.0,
+  referral_enabled: false,
+  referral_bonus: 0.0,
   referral_required_searches: 2,
 
   razorpay_enabled: false,

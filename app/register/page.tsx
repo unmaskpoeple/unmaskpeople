@@ -11,7 +11,6 @@ import {
   ArrowRight,
   ArrowLeft,
   Loader2,
-  Gift,
   CheckCircle2,
   Send,
   ExternalLink,
@@ -66,7 +65,7 @@ function RegisterForm() {
       } else {
         toast.success(
           "Account Created Successfully!",
-          "₹50.00 promotional welcome credits deposited to your wallet."
+          "Welcome to UnMaskPeople.in."
         );
         router.push("/");
       }
@@ -187,9 +186,9 @@ function RegisterForm() {
   return (
     <div className="w-full max-w-md mx-auto my-8 relative z-10 space-y-6">
       <div className="text-center space-y-2">
-        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-emerald-950/80 text-emerald-400 border border-emerald-800/60 text-xs font-bold mb-1 shadow-lg shadow-emerald-500/10">
-          <Gift className="w-3.5 h-3.5" />
-          <span>₹15.00 Welcome Credits Included</span>
+        <div className="inline-flex items-center gap-1.5 px-3 py-1 rounded-full bg-cyan-950/80 text-cyan-400 border border-cyan-800/60 text-xs font-bold mb-1 shadow-lg shadow-cyan-500/10">
+          <ShieldCheck className="w-3.5 h-3.5 text-cyan-400" />
+          <span>Fast & Secure Registration</span>
         </div>
         <h1 className="text-3xl sm:text-4xl font-black tracking-tight leading-tight">
           <span className="gradient-letter">Create Your</span>{" "}
@@ -229,7 +228,7 @@ function RegisterForm() {
 
           <div>
             <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
-              Email Address (Activation link sent here)
+              Email Address
             </label>
             <div className="relative">
               <Mail className="w-4 h-4 absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400" />
@@ -290,7 +289,7 @@ function RegisterForm() {
               </>
             ) : (
               <>
-                <span>Create Account & Send Activation Link</span>
+                <span>Create Account</span>
                 <ArrowRight className="w-4 h-4 text-white" />
               </>
             )}

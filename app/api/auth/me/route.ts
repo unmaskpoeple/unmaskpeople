@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/jwt";
 import prisma from "@/lib/prisma";
+import { db } from "@/lib/firebase";
+import { doc, getDoc } from "firebase/firestore";
 
 export async function GET(req: NextRequest) {
   try {
@@ -9,30 +11,59 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ authenticated: false, user: null }, { status: 401 });
     }
 
-    // Refresh wallet info from db
-    const freshUser = await prisma.user.findUnique({
-      where: { id: sessionUser.id },
-      include: { wallet: true },
-    });
+    let walletBalance = 0;
+    let userName = sessionUser.name;
+    let userRole = sessionUser.role;
+    let userStatus = "ACTIVE";
 
-    if (!freshUser || freshUser.status !== "ACTIVE") {
+    // 1. Try fetching from Cloud Firestore
+    if (db) {
+      try {
+        const userSnap = await getDoc(doc(db, "users", sessionUser.id));
+        if (userSnap.exists()) {
+          const data = userSnap.data();
+          walletBalance = data.walletBalance ?? 0;
+          userName = data.name || userName;
+          userRole = data.role || userRole;
+          userStatus = data.status || userStatus;
+        }
+      } catch (fsErr) {
+        console.warn("Firestore fetch in /me skipped:", fsErr);
+      }
+    }
+
+    // 2. Try fetching from Prisma (local fallback)
+    try {
+      const freshUser = await prisma.user.findUnique({
+        where: { id: sessionUser.id },
+        include: { wallet: true },
+      });
+      if (freshUser) {
+        walletBalance = freshUser.wallet?.balance ?? walletBalance;
+        userName = freshUser.name || userName;
+        userRole = freshUser.role || userRole;
+        userStatus = freshUser.status || userStatus;
+      }
+    } catch (prismaErr) {
+      // Prisma missing on serverless - silent fallback
+    }
+
+    if (userStatus !== "ACTIVE") {
       return NextResponse.json({ authenticated: false, user: null }, { status: 401 });
     }
 
     return NextResponse.json({
       authenticated: true,
       user: {
-        id: freshUser.id,
-        name: freshUser.name,
-        email: freshUser.email,
-        role: freshUser.role,
-        status: freshUser.status,
-        emailVerified: freshUser.emailVerified,
-        walletBalance: freshUser.wallet?.balance || 0,
-        currency: freshUser.wallet?.currency || "INR",
-        createdAt: freshUser.createdAt,
-        referralCode: freshUser.referralCode,
-        successfulSearchCount: freshUser.successfulSearchCount,
+        id: sessionUser.id,
+        name: userName,
+        email: sessionUser.email,
+        role: userRole,
+        status: userStatus,
+        emailVerified: true,
+        walletBalance,
+        currency: "INR",
+        createdAt: new Date().toISOString(),
       },
     });
   } catch (err: any) {
