@@ -33,11 +33,7 @@ export function SiteFooter() {
                   Phone Number Search (+91)
                 </Link>
               </li>
-              <li>
-                <Link href="/search/vehicle" className="hover:text-cyan-400 transition-colors">
-                  Vehicle RC Search
-                </Link>
-              </li>
+              {/* Vehicle RC search temporarily hidden per user request */}
               <li>
                 <Link href="/refer" className="hover:text-violet-400 transition-colors font-semibold">
                   Refer & Earn Program (₹9)

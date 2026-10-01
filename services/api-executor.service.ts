@@ -87,12 +87,18 @@ export class ApiExecutorService {
     let secret = "";
 
     try {
-      if (config.encryptedSecret) {
+      if (process.env.PHONE_SEARCH_API_KEY) {
+        secret = process.env.PHONE_SEARCH_API_KEY;
+      } else if (config.encryptedSecret) {
         secret = decryptSecret(config.encryptedSecret);
       }
 
       const method = (config.method || "POST").toUpperCase();
       let url = config.endpoint.trim();
+      if (url.includes("localhost:3000") && process.env.NEXT_PUBLIC_APP_URL && !process.env.NEXT_PUBLIC_APP_URL.includes("localhost")) {
+        url = url.replace("http://localhost:3000", process.env.NEXT_PUBLIC_APP_URL);
+      }
+
       const headers: Record<string, string> = {
         "Accept": "application/json",
         "User-Agent": "UnMaskPeople-Core-Proxy/1.0",

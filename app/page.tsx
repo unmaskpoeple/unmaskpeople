@@ -183,22 +183,8 @@ export default function ServicesHubPage() {
       buttonText: "Open Phone Search",
       buttonGradient: "from-cyan-500 via-indigo-500 to-fuchsia-500",
     },
-    {
-      id: "vehicle",
-      title: "Search Vehicle Number",
-      titleClass: "gradient-letter-amber",
-      description: "Instant RC verification, ownership category, maker model, fuel type, fitness validity, and RTO data.",
-      icon: Car,
-      iconColor: "text-amber-400",
-      iconBg: "bg-amber-950/80 border-amber-800/60 shadow-amber-500/10",
-      borderHover: "hover:border-amber-500/50 hover:shadow-amber-500/10",
-      accentBadge: "Cost: ₹5.00 / query",
-      badgeColor: "text-amber-400 bg-amber-950/60 border-amber-800/50",
-      href: "/search/vehicle",
-      buttonText: "Open Vehicle Search",
-      buttonGradient: "from-amber-500 via-orange-500 to-rose-500",
-    },
-    // Note: Aadhaar search temporarily removed per user request (restore when instructed)
+    // Note: Vehicle search temporarily hidden per user request (restore when instructed)
+    // Note: Aadhaar search temporarily hidden per user request (restore when instructed)
   ];
 
   return (
@@ -292,7 +278,7 @@ export default function ServicesHubPage() {
         </div>
 
         {/* Active Search Selection Cards */}
-        <div className="w-full grid grid-cols-1 md:grid-cols-2 max-w-4xl mx-auto gap-6">
+        <div className={`w-full ${SERVICES.length > 1 ? "grid grid-cols-1 md:grid-cols-2 max-w-4xl gap-6" : "max-w-xl"} mx-auto`}>
           {SERVICES.map((srv) => {
             const Icon = srv.icon;
             return (
