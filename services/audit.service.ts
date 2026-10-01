@@ -38,21 +38,30 @@ export class AuditService {
       where.action = options.action;
     }
 
-    const [logs, total] = await Promise.all([
-      prisma.auditLog.findMany({
-        where,
-        include: {
-          admin: {
-            select: { id: true, name: true, email: true },
-          },
-        },
-        orderBy: { createdAt: "desc" },
-        skip,
-        take: limit,
-      }),
-      prisma.auditLog.count({ where }),
-    ]);
+    let logs: any[] = [];
+    let total = 0;
 
-    return { logs, total, page, totalPages: Math.ceil(total / limit) };
+    try {
+      const [pLogs, pTotal] = await Promise.all([
+        prisma.auditLog.findMany({
+          where,
+          include: {
+            admin: {
+              select: { id: true, name: true, email: true },
+            },
+          },
+          orderBy: { createdAt: "desc" },
+          skip,
+          take: limit,
+        }),
+        prisma.auditLog.count({ where }),
+      ]);
+      logs = pLogs;
+      total = pTotal;
+    } catch (e) {
+      // Prisma missing on serverless
+    }
+
+    return { logs, total, page, totalPages: Math.ceil(total / limit) || 1 };
   }
 }

@@ -109,6 +109,19 @@ export class SettingsService {
 
       return settings as SystemSettingsMap;
     } catch {
+      // 2. Try Cloud Firestore
+      try {
+        const { db } = await import("@/lib/firebase");
+        if (db) {
+          const { doc, getDoc } = await import("firebase/firestore");
+          const snap = await getDoc(doc(db, "system", "settings"));
+          if (snap.exists()) {
+            return { ...DEFAULT_SETTINGS, ...snap.data() } as SystemSettingsMap;
+          }
+        }
+      } catch (fsErr) {
+        // Fallback
+      }
       return DEFAULT_SETTINGS;
     }
   }
@@ -119,12 +132,28 @@ export class SettingsService {
   }
 
   static async updateSettings(updates: Partial<SystemSettingsMap>): Promise<SystemSettingsMap> {
-    for (const [key, value] of Object.entries(updates)) {
-      await prisma.systemSetting.upsert({
-        where: { key },
-        update: { value: String(value) },
-        create: { key, value: String(value) },
-      });
+    // 1. Save to Cloud Firestore
+    try {
+      const { db } = await import("@/lib/firebase");
+      if (db) {
+        const { doc, setDoc } = await import("firebase/firestore");
+        await setDoc(doc(db, "system", "settings"), updates, { merge: true });
+      }
+    } catch (fsErr) {
+      console.warn("Firestore updateSettings warning:", fsErr);
+    }
+
+    // 2. Save to Prisma if available
+    try {
+      for (const [key, value] of Object.entries(updates)) {
+        await prisma.systemSetting.upsert({
+          where: { key },
+          update: { value: String(value) },
+          create: { key, value: String(value) },
+        });
+      }
+    } catch (prismaErr) {
+      // Prisma optional on serverless
     }
 
     return await this.getAllSettings();

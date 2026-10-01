@@ -1,6 +1,8 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/jwt";
 import prisma from "@/lib/prisma";
+import { db } from "@/lib/firebase";
+import { doc, getDoc, updateDoc, deleteDoc } from "firebase/firestore";
 import { encryptSecret, maskSecret } from "@/lib/crypto";
 import { AuditService } from "@/services/audit.service";
 
@@ -10,21 +12,47 @@ export async function GET(
 ) {
   try {
     await requireAdmin(req);
-    const api = await prisma.apiConfig.findUnique({
-      where: { id: params.id },
-    });
 
-    if (!api) {
-      return NextResponse.json({ error: "API config not found" }, { status: 404 });
+    // 1. Try Firestore
+    if (db) {
+      try {
+        const snap = await getDoc(doc(db, "api_configs", params.id));
+        if (snap.exists()) {
+          const api = snap.data();
+          return NextResponse.json({
+            api: {
+              id: params.id,
+              ...api,
+              encryptedSecret: api.encryptedSecret ? maskSecret(api.encryptedSecret) : "",
+              hasSecret: !!api.encryptedSecret,
+            },
+          });
+        }
+      } catch (e) {
+        // Fallback
+      }
     }
 
-    return NextResponse.json({
-      api: {
-        ...api,
-        encryptedSecret: api.encryptedSecret ? maskSecret(api.encryptedSecret) : "",
-        hasSecret: !!api.encryptedSecret,
-      },
-    });
+    // 2. Try Prisma
+    try {
+      const api = await prisma.apiConfig.findUnique({
+        where: { id: params.id },
+      });
+
+      if (api) {
+        return NextResponse.json({
+          api: {
+            ...api,
+            encryptedSecret: api.encryptedSecret ? maskSecret(api.encryptedSecret) : "",
+            hasSecret: !!api.encryptedSecret,
+          },
+        });
+      }
+    } catch (e) {
+      // Prisma missing
+    }
+
+    return NextResponse.json({ error: "API config not found" }, { status: 404 });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 403 });
   }
@@ -37,14 +65,6 @@ export async function PUT(
   try {
     const admin = await requireAdmin(req);
     const body = await req.json();
-
-    const existing = await prisma.apiConfig.findUnique({
-      where: { id: params.id },
-    });
-
-    if (!existing) {
-      return NextResponse.json({ error: "API config not found" }, { status: 404 });
-    }
 
     const updates: any = {};
     if (body.name) updates.name = body.name.trim();
@@ -61,36 +81,51 @@ export async function PUT(
     if (body.cost !== undefined) updates.cost = Number(body.cost);
     if (body.timeout !== undefined) updates.timeout = Number(body.timeout);
     if (body.isActive !== undefined) updates.isActive = Boolean(body.isActive);
-    if (body.successField !== undefined) updates.successField = body.successField.trim();
-    if (body.successValues !== undefined) updates.successValues = body.successValues.trim();
-    if (body.messageField !== undefined) updates.messageField = body.messageField.trim();
-    if (body.resultField !== undefined) updates.resultField = body.resultField.trim();
+    if (body.successField) updates.successField = body.successField.trim();
+    if (body.successValues) updates.successValues = body.successValues.trim();
+    if (body.messageField) updates.messageField = body.messageField.trim();
+    if (body.resultField) updates.resultField = body.resultField.trim();
 
-    // Only update secret if user typed a new one and didn't leave placeholder
     if (body.secret && !body.secret.includes("••••")) {
       updates.encryptedSecret = encryptSecret(body.secret.trim());
     }
 
-    const updated = await prisma.apiConfig.update({
-      where: { id: params.id },
-      data: updates,
-    });
+    // 1. Update in Firestore
+    if (db) {
+      try {
+        await updateDoc(doc(db, "api_configs", params.id), updates);
+      } catch (e) {
+        // Fallback
+      }
+    }
+
+    // 2. Update in Prisma
+    let updated: any = null;
+    try {
+      updated = await prisma.apiConfig.update({
+        where: { id: params.id },
+        data: updates,
+      });
+    } catch (e) {
+      // Prisma optional
+    }
 
     await AuditService.record({
       adminId: admin.id,
       action: "UPDATE_API_CONFIG",
       targetType: "API_CONFIG",
       targetId: params.id,
-      metadata: { name: updated.name, endpoint: updated.endpoint, isActive: updated.isActive },
+      metadata: { name: body.name || params.id },
     });
 
+    const resultApi = updated || { id: params.id, ...updates };
     return NextResponse.json({
       success: true,
       message: "API configuration updated successfully.",
       api: {
-        ...updated,
-        encryptedSecret: updated.encryptedSecret ? maskSecret(updated.encryptedSecret) : "",
-        hasSecret: !!updated.encryptedSecret,
+        ...resultApi,
+        encryptedSecret: resultApi.encryptedSecret ? maskSecret(resultApi.encryptedSecret) : "",
+        hasSecret: !!resultApi.encryptedSecret,
       },
     });
   } catch (err: any) {
@@ -104,24 +139,30 @@ export async function DELETE(
 ) {
   try {
     const admin = await requireAdmin(req);
-    const existing = await prisma.apiConfig.findUnique({
-      where: { id: params.id },
-    });
 
-    if (!existing) {
-      return NextResponse.json({ error: "API config not found" }, { status: 404 });
+    // 1. Delete in Firestore
+    if (db) {
+      try {
+        await deleteDoc(doc(db, "api_configs", params.id));
+      } catch (e) {
+        // Fallback
+      }
     }
 
-    await prisma.apiConfig.delete({
-      where: { id: params.id },
-    });
+    // 2. Delete in Prisma
+    try {
+      await prisma.apiConfig.delete({
+        where: { id: params.id },
+      });
+    } catch (e) {
+      // Prisma optional
+    }
 
     await AuditService.record({
       adminId: admin.id,
       action: "DELETE_API_CONFIG",
       targetType: "API_CONFIG",
       targetId: params.id,
-      metadata: { name: existing.name },
     });
 
     return NextResponse.json({

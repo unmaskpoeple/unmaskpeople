@@ -378,56 +378,104 @@ export class WalletService {
   }): Promise<WalletOperationResult> {
     const { userId, type, amount, reason, adminId } = params;
 
-    return await prisma.$transaction(async (tx) => {
-      let wallet = await tx.wallet.findUnique({ where: { userId } });
-      if (!wallet) {
-        wallet = await tx.wallet.create({
-          data: { userId, balance: 0.0, currency: "INR" },
-        });
-      }
+    // 1. Try Cloud Firestore (online cloud database)
+    if (db) {
+      try {
+        const userRef = doc(db, "users", userId);
+        const userSnap = await getDoc(userRef);
+        if (userSnap.exists()) {
+          const u = userSnap.data();
+          const balanceBefore = Number((u.walletBalance ?? 0.0).toFixed(2));
+          let balanceAfter = balanceBefore;
 
-      const balanceBefore = wallet.balance;
-      let balanceAfter = balanceBefore;
+          if (type === "MANUAL_CREDIT") {
+            balanceAfter = Number((balanceBefore + amount).toFixed(2));
+          } else {
+            if (balanceBefore < amount) {
+              return {
+                success: false,
+                balanceBefore,
+                balanceAfter,
+                error: `Cannot deduct ₹${amount.toFixed(2)}. User balance is only ₹${balanceBefore.toFixed(2)}.`,
+              };
+            }
+            balanceAfter = Number((balanceBefore - amount).toFixed(2));
+          }
 
-      if (type === "MANUAL_CREDIT") {
-        balanceAfter = Number((balanceBefore + amount).toFixed(2));
-      } else {
-        if (balanceBefore < amount) {
+          await updateDoc(userRef, { walletBalance: balanceAfter });
+
           return {
-            success: false,
+            success: true,
             balanceBefore,
             balanceAfter,
-            error: "Cannot deduct more than user current balance.",
+            transactionId: `tx_adj_${Date.now()}`,
           };
         }
-        balanceAfter = Number((balanceBefore - amount).toFixed(2));
+      } catch (fsErr) {
+        console.warn("Firestore adminManualAdjustment error:", fsErr);
       }
+    }
 
-      await tx.wallet.update({
-        where: { id: wallet.id },
-        data: { balance: balanceAfter },
-      });
+    // 2. Try Prisma Transaction (local fallback)
+    try {
+      return await prisma.$transaction(async (tx) => {
+        let wallet = await tx.wallet.findUnique({ where: { userId } });
+        if (!wallet) {
+          wallet = await tx.wallet.create({
+            data: { userId, balance: 0.0, currency: "INR" },
+          });
+        }
 
-      const transaction = await tx.walletTransaction.create({
-        data: {
-          userId,
-          type,
-          amount,
+        const balanceBefore = wallet.balance;
+        let balanceAfter = balanceBefore;
+
+        if (type === "MANUAL_CREDIT") {
+          balanceAfter = Number((balanceBefore + amount).toFixed(2));
+        } else {
+          if (balanceBefore < amount) {
+            return {
+              success: false,
+              balanceBefore,
+              balanceAfter,
+              error: "Cannot deduct more than user current balance.",
+            };
+          }
+          balanceAfter = Number((balanceBefore - amount).toFixed(2));
+        }
+
+        await tx.wallet.update({
+          where: { id: wallet.id },
+          data: { balance: balanceAfter },
+        });
+
+        const transaction = await tx.walletTransaction.create({
+          data: {
+            userId,
+            type,
+            amount,
+            balanceBefore,
+            balanceAfter,
+            referenceId: `ADMIN_ADJ_${adminId.slice(0, 8)}`,
+            description: `Admin adjustment: ${reason}`,
+            status: "SUCCESS",
+          },
+        });
+
+        return {
+          success: true,
           balanceBefore,
           balanceAfter,
-          referenceId: `ADMIN_ADJ_${adminId.slice(0, 8)}`,
-          description: `Admin adjustment: ${reason}`,
-          status: "SUCCESS",
-        },
+          transactionId: transaction.id,
+        };
       });
-
+    } catch (e: any) {
       return {
-        success: true,
-        balanceBefore,
-        balanceAfter,
-        transactionId: transaction.id,
+        success: false,
+        balanceBefore: 0,
+        balanceAfter: 0,
+        error: e.message || "Wallet adjustment failed.",
       };
-    });
+    }
   }
 
   /**

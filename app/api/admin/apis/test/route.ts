@@ -36,8 +36,12 @@ export async function POST(req: NextRequest) {
     if (secret && !secret.includes("••••")) {
       encryptedSecret = encryptSecret(secret.trim());
     } else if (id) {
-      const existing = await prisma.apiConfig.findUnique({ where: { id } });
-      if (existing) encryptedSecret = existing.encryptedSecret;
+      try {
+        const existing = await prisma.apiConfig.findUnique({ where: { id } });
+        if (existing) encryptedSecret = existing.encryptedSecret;
+      } catch (e) {
+        // Prisma missing
+      }
     }
 
     const testConfig = {

@@ -17,25 +17,34 @@ export async function GET(req: NextRequest) {
     if (status !== "ALL") where.status = status;
     if (apiConfigId !== "ALL") where.apiConfigId = apiConfigId;
 
-    const [logs, total] = await Promise.all([
-      prisma.apiRequest.findMany({
-        where,
-        orderBy: { createdAt: "desc" },
-        skip,
-        take: limit,
-        include: {
-          user: { select: { id: true, name: true, email: true } },
-          apiConfig: { select: { id: true, name: true } },
-        },
-      }),
-      prisma.apiRequest.count({ where }),
-    ]);
+    let logs: any[] = [];
+    let total = 0;
+
+    try {
+      const [pLogs, pTotal] = await Promise.all([
+        prisma.apiRequest.findMany({
+          where,
+          orderBy: { createdAt: "desc" },
+          skip,
+          take: limit,
+          include: {
+            user: { select: { id: true, name: true, email: true } },
+            apiConfig: { select: { id: true, name: true } },
+          },
+        }),
+        prisma.apiRequest.count({ where }),
+      ]);
+      logs = pLogs;
+      total = pTotal;
+    } catch (e) {
+      // Prisma missing on serverless
+    }
 
     return NextResponse.json({
       logs,
       total,
       page,
-      totalPages: Math.ceil(total / limit),
+      totalPages: Math.ceil(total / limit) || 1,
     });
   } catch (err: any) {
     return NextResponse.json({ error: err.message }, { status: 403 });
