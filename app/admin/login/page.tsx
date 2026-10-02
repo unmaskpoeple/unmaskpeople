@@ -81,7 +81,7 @@ export default function AdminLoginPage() {
                   value={email}
                   onChange={(e) => setEmail(e.target.value)}
                   required
-                  placeholder="admin@unmaskpeople.in"
+                  placeholder="admin@domain.com"
                   className="w-full pl-10 pr-4 py-3 rounded-xl border border-slate-700 bg-slate-950 text-slate-100 text-sm focus:outline-none focus:ring-2 focus:ring-violet-500"
                 />
               </div>
@@ -104,11 +104,6 @@ export default function AdminLoginPage() {
               </div>
             </div>
 
-            <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-[11px] text-slate-400 space-y-1">
-              <span className="font-semibold text-slate-200">Default Seed Credentials:</span>
-              <p>Email: <code className="text-violet-400">admin@unmaskpeople.in</code></p>
-              <p>Password: <code className="text-violet-400">AdminPassword123!</code></p>
-            </div>
 
             <button
               type="submit"

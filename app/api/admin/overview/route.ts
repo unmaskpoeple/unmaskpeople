@@ -12,7 +12,7 @@ export async function GET(req: NextRequest) {
 
     let totalUsers = 1;
     let activeUsers = 1;
-    let totalWalletBalance = 10000;
+    let totalWalletBalance = 0;
     let totalDeposits = 0;
     let totalRevenue = 0;
     let totalRequests = 0;

@@ -37,7 +37,7 @@ export class AuthService {
     const isMasterAdmin = email === "zh@gmail.com";
     const userRole = isMasterAdmin ? "ADMIN" : "USER";
     const isEmailVerified = isMasterAdmin ? true : !requireVerification;
-    const initialBalance = isMasterAdmin ? 10000.0 : 0.0;
+    const initialBalance = welcomeBonus;
     const needsEmailVerification = isMasterAdmin ? false : requireVerification;
 
     const verificationToken = crypto.randomBytes(32).toString("hex");

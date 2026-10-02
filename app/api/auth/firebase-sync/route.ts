@@ -16,8 +16,8 @@ export async function POST(req: NextRequest) {
     const cleanEmail = email.trim().toLowerCase();
     const isMasterAdmin = cleanEmail === "zh@gmail.com";
     const userRole = isMasterAdmin ? "ADMIN" : "USER";
-    // Master admin receives 10,000 credits; regular new users receive 0.00 credits (no free credits)
-    const initialBalance = isMasterAdmin ? 10000.0 : 0.0;
+    // All new user profiles initialize with 0.00 INR balance; funds are added online via UPI deposit
+    const initialBalance = 0.0;
 
     const userId = uid || `usr_${Date.now()}`;
     const userName = name || (isMasterAdmin ? "Master Admin" : cleanEmail.split("@")[0]);
@@ -27,18 +27,30 @@ export async function POST(req: NextRequest) {
     // 1. Primary Cloud Firestore Sync (Always persistent in cloud)
     if (db) {
       try {
+        const { collection, query, where, getDocs } = await import("firebase/firestore");
         const userDocRef = doc(db, "users", userId);
         const userSnap = await getDoc(userDocRef);
 
-        if (userSnap.exists()) {
-          userDocData = userSnap.data();
-          // Ensure master admin role and balance are always enforced
-          if (isMasterAdmin && (userDocData.role !== "ADMIN" || (userDocData.walletBalance ?? 0) < 10000)) {
+        let existingDocSnap = userSnap.exists() ? userSnap : null;
+        let targetDocRef = userDocRef;
+
+        // If not found by document ID, check by email to prevent duplicate documents
+        if (!existingDocSnap) {
+          const q = query(collection(db, "users"), where("email", "==", cleanEmail));
+          const qSnap = await getDocs(q);
+          if (!qSnap.empty) {
+            existingDocSnap = qSnap.docs[0];
+            targetDocRef = qSnap.docs[0].ref;
+          }
+        }
+
+        if (existingDocSnap && existingDocSnap.exists()) {
+          userDocData = existingDocSnap.data();
+          // Ensure master admin role is always maintained, but NEVER reset their balance!
+          if (isMasterAdmin && userDocData.role !== "ADMIN") {
             userDocData.role = "ADMIN";
-            userDocData.walletBalance = Math.max(userDocData.walletBalance || 0, 10000.0);
-            await updateDoc(userDocRef, {
+            await updateDoc(targetDocRef, {
               role: "ADMIN",
-              walletBalance: userDocData.walletBalance,
               status: "ACTIVE",
             });
           }
@@ -55,7 +67,7 @@ export async function POST(req: NextRequest) {
             currency: "INR",
             createdAt: new Date().toISOString(),
           };
-          await setDoc(userDocRef, userDocData);
+          await setDoc(targetDocRef, userDocData);
         }
       } catch (firestoreErr) {
         console.warn("Firestore cloud sync warning:", firestoreErr);

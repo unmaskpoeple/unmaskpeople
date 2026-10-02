@@ -25,7 +25,7 @@ export async function registerWithFirebase(name: string, email: string, password
             name: name.trim(),
             email: cleanEmail,
             role: cleanEmail === "zh@gmail.com" ? "ADMIN" : "USER",
-            walletBalance: cleanEmail === "zh@gmail.com" ? 10000 : 0,
+            walletBalance: 0.0,
             status: "ACTIVE",
             createdAt: new Date().toISOString(),
           });

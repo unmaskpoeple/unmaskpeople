@@ -12,20 +12,41 @@ export interface WalletOperationResult {
 
 export class WalletService {
   /**
-   * Get user wallet by userId
+   * Get user wallet by userId or email
    */
   static async getWallet(userId: string) {
     // 1. Try Cloud Firestore (Primary online source of truth)
     if (db) {
       try {
-        const userDocRef = doc(db, "users", userId);
-        const userSnap = await getDoc(userDocRef);
-        if (userSnap.exists()) {
+        let userSnap = null;
+        if (userId && !userId.startsWith("anon_")) {
+          userSnap = await getDoc(doc(db, "users", userId));
+        }
+
+        if (!userSnap || !userSnap.exists()) {
+          let emailToSearch = userId.includes("@") ? userId.trim().toLowerCase() : null;
+          if (!emailToSearch) {
+            try {
+              const localU = await prisma.user.findUnique({ where: { id: userId } });
+              if (localU?.email) emailToSearch = localU.email.trim().toLowerCase();
+            } catch {}
+          }
+          if (emailToSearch) {
+            const { collection, query, where, getDocs } = await import("firebase/firestore");
+            const q = query(collection(db, "users"), where("email", "==", emailToSearch));
+            const qSnap = await getDocs(q);
+            if (!qSnap.empty) {
+              userSnap = qSnap.docs[0];
+            }
+          }
+        }
+
+        if (userSnap && userSnap.exists()) {
           const data = userSnap.data();
           return {
-            id: `wallet_${userId}`,
-            userId,
-            balance: data.walletBalance ?? 0.0,
+            id: `wallet_${userSnap.id}`,
+            userId: userSnap.id,
+            balance: Number(data.walletBalance ?? 0.0),
             currency: "INR",
           };
         }
@@ -76,9 +97,29 @@ export class WalletService {
     // 1. Check & Charge Cloud Firestore
     if (db) {
       try {
-        const userDocRef = doc(db, "users", userId);
-        const userSnap = await getDoc(userDocRef);
-        if (userSnap.exists()) {
+        let userDocRef = doc(db, "users", userId);
+        let userSnap = await getDoc(userDocRef);
+
+        if (!userSnap || !userSnap.exists()) {
+          let emailToSearch = userId.includes("@") ? userId.trim().toLowerCase() : null;
+          if (!emailToSearch) {
+            try {
+              const localU = await prisma.user.findUnique({ where: { id: userId } });
+              if (localU?.email) emailToSearch = localU.email.trim().toLowerCase();
+            } catch {}
+          }
+          if (emailToSearch) {
+            const { collection, query, where, getDocs } = await import("firebase/firestore");
+            const q = query(collection(db, "users"), where("email", "==", emailToSearch));
+            const qSnap = await getDocs(q);
+            if (!qSnap.empty) {
+              userSnap = qSnap.docs[0];
+              userDocRef = qSnap.docs[0].ref;
+            }
+          }
+        }
+
+        if (userSnap && userSnap.exists()) {
           const data = userSnap.data();
           const currentBal = Number((data.walletBalance ?? 0.0).toFixed(2));
           if (currentBal < amount) {
@@ -92,6 +133,20 @@ export class WalletService {
 
           const newBal = Number((currentBal - amount).toFixed(2));
           await updateDoc(userDocRef, { walletBalance: newBal });
+
+          // Synchronize any duplicate docs with the same email in Firestore
+          if (data.email) {
+            try {
+              const { collection, query, where, getDocs } = await import("firebase/firestore");
+              const qAll = query(collection(db, "users"), where("email", "==", String(data.email).trim().toLowerCase()));
+              const allSnap = await getDocs(qAll);
+              for (const item of allSnap.docs) {
+                if (item.id !== userDocRef.id) {
+                  await updateDoc(item.ref, { walletBalance: newBal });
+                }
+              }
+            } catch {}
+          }
 
           // Also try recording locally in Prisma if available
           try {

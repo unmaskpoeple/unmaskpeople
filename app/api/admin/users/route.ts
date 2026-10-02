@@ -32,7 +32,7 @@ export async function GET(req: NextRequest) {
             emailVerified: data.emailVerified ?? true,
             createdAt: data.createdAt || new Date().toISOString(),
             wallet: {
-              balance: data.walletBalance ?? (data.email === "zh@gmail.com" ? 10000.0 : 0.0),
+              balance: Number(data.walletBalance ?? 0.0),
               currency: "INR",
             },
             _count: { apiRequests: 0, walletTransactions: 0 },

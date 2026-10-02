@@ -67,7 +67,50 @@ export async function getSessionUser(req?: NextRequest) {
 
   const isMaster = isMasterAdminEmail(payload.email);
 
-  // 1. Try local Prisma DB (if available)
+  // 1. Primary: Cloud Firestore (Online database of record)
+  try {
+    const { db } = await import("./firebase");
+    if (db) {
+      const { doc, getDoc, collection, query, where, getDocs } = await import("firebase/firestore");
+      let userSnap = null;
+      if (payload.userId) {
+        userSnap = await getDoc(doc(db, "users", payload.userId));
+      }
+
+      let uData: any = null;
+      if (userSnap && userSnap.exists()) {
+        uData = userSnap.data();
+      } else if (payload.email) {
+        const q = query(collection(db, "users"), where("email", "==", payload.email.trim().toLowerCase()));
+        const qSnap = await getDocs(q);
+        if (!qSnap.empty) {
+          uData = qSnap.docs[0].data();
+        }
+      }
+
+      if (uData && uData.status !== "DISABLED" && uData.status !== "SUSPENDED") {
+        return {
+          id: payload.userId,
+          name: uData.name || payload.name,
+          email: uData.email || payload.email,
+          role: (isMaster ? "ADMIN" : uData.role) || payload.role,
+          status: uData.status || "ACTIVE",
+          emailVerified: true,
+          wallet: {
+            id: `wallet_${payload.userId}`,
+            userId: payload.userId,
+            balance: Number(uData.walletBalance ?? 0.0),
+            currency: "INR",
+          },
+          createdAt: uData.createdAt || new Date(),
+        };
+      }
+    }
+  } catch (fsErr) {
+    // Firestore error fallback
+  }
+
+  // 2. Secondary: Fallback to local Prisma DB only if Cloud Firestore is offline
   try {
     const user = await prisma.user.findUnique({
       where: { id: payload.userId },
@@ -92,37 +135,6 @@ export async function getSessionUser(req?: NextRequest) {
     // Prisma SQLite unavailable on Vercel serverless
   }
 
-  // 2. Try Cloud Firestore (online database)
-  try {
-    const { db } = await import("./firebase");
-    if (db) {
-      const { doc, getDoc } = await import("firebase/firestore");
-      const userSnap = await getDoc(doc(db, "users", payload.userId));
-      if (userSnap.exists()) {
-        const u = userSnap.data();
-        if (u.status !== "DISABLED" && u.status !== "SUSPENDED") {
-          return {
-            id: payload.userId,
-            name: u.name || payload.name,
-            email: u.email || payload.email,
-            role: (isMaster ? "ADMIN" : u.role) || payload.role,
-            status: u.status || "ACTIVE",
-            emailVerified: true,
-            wallet: {
-              id: `wallet_${payload.userId}`,
-              userId: payload.userId,
-              balance: u.walletBalance ?? (isMaster ? 10000.0 : 0.0),
-              currency: "INR",
-            },
-            createdAt: u.createdAt || new Date(),
-          };
-        }
-      }
-    }
-  } catch (fsErr) {
-    // Firestore error fallback
-  }
-
   // 3. Resilient fallback to verified cryptographic JWT payload
   return {
     id: payload.userId,
@@ -134,7 +146,7 @@ export async function getSessionUser(req?: NextRequest) {
     wallet: {
       id: `wallet_${payload.userId}`,
       userId: payload.userId,
-      balance: isMaster ? 10000.0 : 0.0,
+      balance: 0.0,
       currency: "INR",
     },
     createdAt: new Date(),

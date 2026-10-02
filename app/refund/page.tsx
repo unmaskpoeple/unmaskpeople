@@ -80,15 +80,15 @@ export default function RefundPage() {
 
           <section className="space-y-3">
             <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-              3. Payment Gateway Top-Up Refunds (Razorpay)
+              3. UPI Top-Up Reconciliation & Disputed Transfers
             </h2>
             <p>
-              If money was debited from your bank account or UPI app during a wallet recharge but failed to reflect in your UnMaskPeople.in wallet due to an intermittent network disconnect:
+              If money was debited from your bank account or UPI app during a wallet top-up but failed to reflect in your UnMaskPeople.in wallet:
             </p>
             <ul className="list-disc pl-5 space-y-1.5 text-slate-400">
-              <li><strong>Automated Bank Reversals:</strong> In most cases, Razorpay's reconciliation engine automatically reverses the amount back to your original payment method within 24 to 48 hours.</li>
-              <li><strong>Manual Support Escalation:</strong> If your account has not been credited within 48 hours, email us at <code className="text-cyan-400">billing@unmaskpeople.in</code> with your <strong>Razorpay Payment ID</strong> (starts with <code>pay_...</code>) or UPI Reference / UTR number. We will reconcile and credit your wallet or initiate a direct bank reversal.</li>
-              <li><strong>Timeline:</strong> Bank refunds typically take <strong>5 to 7 business days</strong> to reflect in your source account depending on your issuing bank.</li>
+              <li><strong>UTR Verification:</strong> Ensure you entered the correct 12-digit UPI UTR / Reference number from your payment app (Google Pay, PhonePe, Paytm, or BHIM).</li>
+              <li><strong>Manual Support Escalation:</strong> If your account has not been credited after submitting your UTR, email us at <code className="text-cyan-400">billing@unmaskpeople.in</code> with your 12-digit UPI Reference / UTR number and payment screenshot. Our team will verify the payment and credit your wallet promptly.</li>
+              <li><strong>Timeline:</strong> Bank reconciliation is typically completed within <strong>2 to 4 business hours</strong>.</li>
             </ul>
           </section>
 
