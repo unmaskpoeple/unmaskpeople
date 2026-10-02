@@ -185,6 +185,77 @@ export class WalletService {
   }
 
   /**
+   * Atomically refund wallet for a failed or unfulfilled API request
+   */
+  static async refundForFailedRequest(params: {
+    userId: string;
+    amount: number;
+    referenceId: string;
+    reason: string;
+  }): Promise<WalletOperationResult> {
+    const { userId, amount, referenceId, reason } = params;
+    if (amount <= 0) {
+      return { success: true, balanceBefore: 0, balanceAfter: 0 };
+    }
+
+    // 1. Update in Cloud Firestore
+    if (db) {
+      try {
+        const userDocRef = doc(db, "users", userId);
+        const userSnap = await getDoc(userDocRef);
+        if (userSnap.exists()) {
+          const currentBal = Number((userSnap.data().walletBalance ?? 0.0).toFixed(2));
+          const newBal = Number((currentBal + amount).toFixed(2));
+          await updateDoc(userDocRef, { walletBalance: newBal });
+
+          try {
+            await prisma.walletTransaction.create({
+              data: {
+                userId,
+                type: "REFUND",
+                amount,
+                balanceBefore: currentBal,
+                balanceAfter: newBal,
+                referenceId,
+                description: `Automated refund: ${reason}`,
+                status: "SUCCESS",
+              },
+            });
+          } catch (e) {}
+
+          return { success: true, balanceBefore: currentBal, balanceAfter: newBal };
+        }
+      } catch (e) {}
+    }
+
+    // 2. Prisma fallback
+    try {
+      return await prisma.$transaction(async (tx) => {
+        const wallet = await tx.wallet.findUnique({ where: { userId } });
+        if (!wallet) return { success: false, balanceBefore: 0, balanceAfter: 0 };
+        const balanceBefore = Number(wallet.balance.toFixed(2));
+        const balanceAfter = Number((balanceBefore + amount).toFixed(2));
+        await tx.wallet.update({ where: { id: wallet.id }, data: { balance: balanceAfter } });
+        const transaction = await tx.walletTransaction.create({
+          data: {
+            userId,
+            type: "REFUND",
+            amount,
+            balanceBefore,
+            balanceAfter,
+            referenceId,
+            description: `Automated refund: ${reason}`,
+            status: "SUCCESS",
+          },
+        });
+        return { success: true, balanceBefore, balanceAfter, transactionId: transaction.id };
+      });
+    } catch (e: any) {
+      return { success: false, balanceBefore: 0, balanceAfter: 0, error: e.message };
+    }
+  }
+
+  /**
    * Atomically deposit funds into wallet (e.g. from payment gateway)
    */
   static async depositFunds(params: {

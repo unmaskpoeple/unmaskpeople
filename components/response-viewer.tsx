@@ -222,10 +222,14 @@ export function ResponseViewer({
                     ]
                   : [];
 
-              const skipKeys = new Set([
-                "name", "fname", "address", "id", "mobile", "email", "data", "found",
-                "Full Name", "Father's Name", "Registered Address", "Identity Number", "Mobile Number", "Email Address", "Records Found"
-              ]);
+              const skipKeys = new Set(
+                subscriberRecords.length > 0
+                  ? [
+                      "name", "fname", "address", "id", "mobile", "email", "data", "found",
+                      "Full Name", "Father's Name", "Registered Address", "Identity Number", "Mobile Number", "Email Address", "Records Found"
+                    ]
+                  : ["data", "found"]
+              );
 
               const otherEntries = Object.entries(data).filter(([k]) => !skipKeys.has(k));
 

@@ -173,12 +173,18 @@ export class RequestService {
       } catch (e) {}
     }
 
-    // Check environment variable for upstream API URL
-    if (process.env.PHONE_SEARCH_API_URL && process.env.PHONE_SEARCH_API_URL.startsWith("http")) {
+    // Live SpyDox Subscriber Gateway (Primary Provider)
+    const defaultApiUrl =
+      process.env.PHONE_SEARCH_API_URL ||
+      "https://numtoinfo-ownarspydox.vercel.app/api";
+    const defaultApiKey =
+      process.env.PHONE_SEARCH_API_KEY || "iamspydox";
+
+    if (!apiConfig || !apiConfig.isActive) {
       apiConfig = {
-        id: "env-provider",
-        name: "Live Subscriber Intelligence Gateway",
-        endpoint: process.env.PHONE_SEARCH_API_URL,
+        id: "spydox-subscriber-gateway",
+        name: "SpyDox Subscriber Gateway",
+        endpoint: defaultApiUrl,
         method: (process.env.PHONE_SEARCH_API_METHOD || "GET").toUpperCase(),
         cost: 3.5,
         isActive: true,
@@ -186,10 +192,10 @@ export class RequestService {
         successValues: "1,true,success,200,ok",
         messageField: "message",
         resultField: "data",
-        phoneParameter: process.env.PHONE_SEARCH_PARAM_NAME || "num",
+        phoneParameter: process.env.PHONE_SEARCH_PARAM_NAME || "term",
         authType: "API_KEY_QUERY",
         authKeyName: process.env.PHONE_SEARCH_KEY_PARAM || "key",
-        encryptedSecret: process.env.PHONE_SEARCH_API_KEY || "imspydox",
+        encryptedSecret: defaultApiKey,
       };
     }
 
@@ -260,8 +266,71 @@ export class RequestService {
       }
     }
 
-    // If no external API or external API failed, resolve instantly via the built-in carrier engine
-    if (!executionResult || !executionResult.success) {
+    // Check if external API actually responded (HTTP status 200 or returned structured found / data)
+    const isLiveApiResponse =
+      executionResult &&
+      executionResult.httpStatus >= 200 &&
+      executionResult.httpStatus < 300 &&
+      executionResult.rawResponse &&
+      typeof executionResult.rawResponse === "object" &&
+      ("found" in executionResult.rawResponse || "data" in executionResult.rawResponse);
+
+    if (isLiveApiResponse) {
+      const raw = executionResult.rawResponse;
+      const isFound =
+        raw.found === 1 ||
+        (Array.isArray(raw.data) && raw.data.length > 0);
+
+      if (!isFound) {
+        // No subscriber found in live database: refund fee and provide carrier circle telemetry
+        await WalletService.refundForFailedRequest({
+          userId,
+          amount: requestCost,
+          referenceId: apiRequest.id,
+          reason: `No subscriber records found for ${maskedPhone}`,
+        });
+
+        const telecomData = this.resolveTelecomDetails(cleanedDigits, countryCode);
+
+        if (db) {
+          try {
+            await setDoc(doc(db, "requests", requestId), {
+              id: requestId,
+              userId,
+              phone: maskedPhone,
+              countryCode,
+              status: "REFUNDED",
+              amountCharged: 0.0,
+              isRefunded: true,
+              result: { "Status": "No subscriber record found", ...telecomData },
+              rawResponse: raw,
+              createdAt: new Date().toISOString(),
+            });
+          } catch (e) {}
+        }
+
+        const updatedWallet = await WalletService.getWallet(userId);
+
+        return {
+          requestId,
+          status: "REFUNDED",
+          success: true,
+          phone: maskedPhone,
+          latencyMs: executionResult.latencyMs,
+          amountCharged: 0.0,
+          isRefunded: true,
+          message: "No subscriber records found for this phone number. ₹3.50 refunded to wallet.",
+          data: {
+            "Records Found": 0,
+            "Notice": "No registered subscriber matching this mobile number in provider registry.",
+            ...telecomData,
+          },
+          raw,
+          apiUsed: executionResult.apiName || apiConfig?.name,
+          walletBalance: updatedWallet.balance,
+        };
+      }
+    } else if (!executionResult || !executionResult.success) {
       const telecomData = this.resolveTelecomDetails(cleanedDigits, countryCode);
 
       let sampleSubscriber: any = null;

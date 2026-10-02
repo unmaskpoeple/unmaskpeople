@@ -1,6 +1,12 @@
+import dns from "dns";
 import { decryptSecret } from "@/lib/crypto";
 import { sanitizeData, extractKeyValueSummary } from "@/lib/sanitizer";
 import prisma from "@/lib/prisma";
+
+// Prevent IPv6 DNS resolution timeouts on Node
+try {
+  dns.setDefaultResultOrder?.("ipv4first");
+} catch {}
 
 export interface ApiExecutionInput {
   phone: string;
@@ -134,10 +140,7 @@ export class ApiExecutorService {
           if (secret && config.authKeyName) headers[config.authKeyName] = secret;
           break;
         case "API_KEY_QUERY":
-          if (secret) {
-            const separator = url.includes("?") ? "&" : "?";
-            url += `${separator}${encodeURIComponent(config.authKeyName || "api_key")}=${encodeURIComponent(secret)}`;
-          }
+          // Handled during URL assembly below
           break;
         default:
           break;
@@ -147,8 +150,38 @@ export class ApiExecutorService {
 
       // Handle GET vs POST/PUT body and parameters
       if (method === "GET") {
-        const separator = url.includes("?") ? "&" : "?";
-        url += `${separator}${encodeURIComponent(config.phoneParameter || "phone")}=${encodeURIComponent(phone)}`;
+        try {
+          const parsedUrl = new URL(url);
+
+          // 1. Set Auth parameter if query based
+          if (config.authType === "API_KEY_QUERY" && secret) {
+            parsedUrl.searchParams.set(config.authKeyName || "key", secret);
+          } else if (secret && !parsedUrl.searchParams.has("key")) {
+            parsedUrl.searchParams.set("key", secret);
+          }
+
+          // 2. Set type parameter (required by spydox API for mobile search)
+          if (!parsedUrl.searchParams.has("type")) {
+            parsedUrl.searchParams.set("type", "mobile");
+          }
+
+          // 3. Set phone search term parameter
+          const phoneKey = config.phoneParameter || (parsedUrl.searchParams.has("term") ? "term" : "phone");
+          parsedUrl.searchParams.set(phoneKey, phone);
+
+          url = parsedUrl.toString();
+        } catch {
+          const separator = url.includes("?") ? "&" : "?";
+          let queryAddons = "";
+          if (secret && !url.includes("key=")) {
+            queryAddons += `${encodeURIComponent(config.authKeyName || "key")}=${encodeURIComponent(secret)}&`;
+          }
+          if (!url.includes("type=")) {
+            queryAddons += "type=mobile&";
+          }
+          queryAddons += `${encodeURIComponent(config.phoneParameter || "term")}=${encodeURIComponent(phone)}`;
+          url += `${separator}${queryAddons}`;
+        }
       } else {
         headers["Content-Type"] = "application/json";
 
