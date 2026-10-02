@@ -16,57 +16,7 @@ export interface SubmitPhoneParams {
 }
 
 export class RequestService {
-  /**
-   * Resolve telecom carrier & HLR details for Indian mobile numbers
-   */
-  static resolveTelecomDetails(cleanedPhone: string, countryCode = "+91") {
-    const prefix2 = cleanedPhone.substring(0, 2);
-    const prefix3 = cleanedPhone.substring(0, 3);
 
-    let carrier = "Reliance Jio Infocomm Ltd";
-    let circle = "Mumbai & Maharashtra";
-    let mccMnc = "405-861";
-
-    if (["98", "99", "97", "96", "70", "79", "81"].includes(prefix2)) {
-      carrier = "Bharti Airtel Telecom Ltd";
-      circle = "Delhi NCR & Northern Region";
-      mccMnc = "404-45";
-    } else if (["88", "77", "91", "92", "93"].includes(prefix2)) {
-      carrier = "Vodafone Idea (Vi) Ltd";
-      circle = "Karnataka & Bangalore Urban";
-      mccMnc = "404-20";
-    } else if (["94", "95"].includes(prefix2)) {
-      carrier = "Bharat Sanchar Nigam Ltd (BSNL)";
-      circle = "Tamil Nadu & Chennai Circle";
-      mccMnc = "404-34";
-    } else if (["62", "63", "73", "74", "82", "83", "84", "85", "87", "89", "90"].includes(prefix2)) {
-      carrier = "Reliance Jio Infocomm Ltd";
-      circle = "Maharashtra, Gujarat & Western";
-      mccMnc = "405-854";
-    }
-
-    return {
-      valid: true,
-      phone: `${countryCode} ${cleanedPhone}`,
-      national_format: `0${cleanedPhone}`,
-      country: "India",
-      country_code: "IN",
-      carrier,
-      network_operator: carrier,
-      line_type: "Mobile (GSM / VoLTE / 5G)",
-      circle,
-      telecom_circle: circle,
-      mcc_mnc: mccMnc,
-      hlr_status: "Active & Reachable (Online)",
-      roaming_status: "Home Network (National Roaming Off)",
-      is_ported: "No (Original Registered Network)",
-      fraud_risk_score: "Low Risk (Safe Subscriber)",
-      reputation_rating: "98 / 100",
-      dnd_status: "Registered / Consumer Preferences Active",
-      lookup_timestamp: new Date().toISOString(),
-      source: "Live Telecom Network Core Gateway",
-    };
-  }
 
   /**
    * Main phone number submission pipeline with full transaction safety,
@@ -285,15 +235,13 @@ export class RequestService {
         (Array.isArray(raw.data) && raw.data.length > 0);
 
       if (!isFound) {
-        // No subscriber found in live database: refund fee and provide carrier circle telemetry
+        // No subscriber found in live database: refund fee
         await WalletService.refundForFailedRequest({
           userId,
           amount: requestCost,
           referenceId: apiRequest.id,
           reason: `No subscriber records found for ${maskedPhone}`,
         });
-
-        const telecomData = this.resolveTelecomDetails(cleanedDigits, countryCode);
 
         if (db) {
           try {
@@ -305,7 +253,7 @@ export class RequestService {
               status: "REFUNDED",
               amountCharged: 0.0,
               isRefunded: true,
-              result: { "Status": "No subscriber record found", ...telecomData },
+              result: raw,
               rawResponse: raw,
               createdAt: new Date().toISOString(),
             });
@@ -323,18 +271,14 @@ export class RequestService {
           amountCharged: 0.0,
           isRefunded: true,
           message: `No subscriber records found for this phone number. ₹${requestCost.toFixed(2)} refunded to wallet.`,
-          data: {
-            "Records Found": 0,
-            "Notice": "No registered subscriber matching this mobile number in provider registry.",
-            ...telecomData,
-          },
+          data: raw,
           raw,
           apiUsed: executionResult.apiName || apiConfig?.name,
           walletBalance: updatedWallet.balance,
         };
       }
     } else if (!executionResult || !executionResult.success) {
-      // API call failed: refund fee and return honest provider error without generating fake data
+      // API call failed: refund fee and return honest provider error
       await WalletService.refundForFailedRequest({
         userId,
         amount: requestCost,
@@ -342,8 +286,12 @@ export class RequestService {
         reason: `Lookup provider error: ${executionResult?.message || "Provider unreachable"}`,
       });
 
-      const telecomData = this.resolveTelecomDetails(cleanedDigits, countryCode);
       const updatedWallet = await WalletService.getWallet(userId);
+      const fallbackPayload = executionResult?.rawResponse || {
+        found: 0,
+        data: [],
+        message: executionResult?.message || "Lookup service error",
+      };
 
       if (db) {
         try {
@@ -355,7 +303,7 @@ export class RequestService {
             status: "REFUNDED",
             amountCharged: 0.0,
             isRefunded: true,
-            result: { "Status": "Provider request failed", ...telecomData },
+            result: fallbackPayload,
             rawResponse: executionResult?.rawResponse || null,
             createdAt: new Date().toISOString(),
           });
@@ -371,10 +319,7 @@ export class RequestService {
         amountCharged: 0.0,
         isRefunded: true,
         message: executionResult?.message || `Lookup failed. ₹${requestCost.toFixed(2)} refunded to wallet.`,
-        data: {
-          "Notice": "Unable to resolve subscriber intelligence from provider. Fee refunded.",
-          ...telecomData,
-        },
+        data: fallbackPayload,
         raw: executionResult?.rawResponse || null,
         apiUsed: executionResult?.apiName || apiConfig?.name,
         walletBalance: updatedWallet.balance,
@@ -391,7 +336,7 @@ export class RequestService {
           countryCode,
           status: "SUCCESSFUL",
           amountCharged: requestCost,
-          result: executionResult.sanitizedResult,
+          result: executionResult.rawResponse || executionResult.sanitizedResult,
           createdAt: new Date().toISOString(),
         });
       } catch (e) {
@@ -410,7 +355,7 @@ export class RequestService {
           amountCharged: requestCost,
           isRefunded: false,
           rawResponse: JSON.stringify(executionResult.rawResponse),
-          sanitizedResult: JSON.stringify(executionResult.sanitizedResult),
+          sanitizedResult: JSON.stringify(executionResult.rawResponse || executionResult.sanitizedResult),
           completedAt: new Date(),
         },
       });
@@ -430,7 +375,7 @@ export class RequestService {
       amountCharged: requestCost,
       isRefunded: false,
       message: executionResult.message,
-      data: executionResult.sanitizedResult,
+      data: executionResult.rawResponse || executionResult.sanitizedResult,
       raw: executionResult.rawResponse,
       apiUsed: executionResult.apiName,
       walletBalance: updatedWallet.balance,

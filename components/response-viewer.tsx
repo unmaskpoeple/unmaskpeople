@@ -195,53 +195,71 @@ export function ResponseViewer({
         {activeTab === "summary" ? (
           <div>
             {(() => {
-              // Extract subscriber records if present
-              const rawList = Array.isArray(raw?.data)
+              const payload = (raw && typeof raw === "object" && Object.keys(raw).length > 0) ? raw : (data || {});
+
+              // 1. Extract found value if present
+              const hasFound = typeof payload.found !== "undefined";
+              const foundCount = hasFound ? Number(payload.found) : null;
+
+              // 2. Extract data list
+              const rawList = Array.isArray(payload.data)
+                ? payload.data
+                : Array.isArray(raw?.data)
                 ? raw.data
                 : Array.isArray(data?.data)
                 ? data.data
-                : Array.isArray(raw)
-                ? raw
-                : Array.isArray(data)
-                ? data
                 : [];
 
-              const subscriberRecords =
-                rawList.length > 0
-                  ? rawList
-                  : (data?.name || data?.["Full Name"] || raw?.name)
-                  ? [
-                      {
-                        name: data?.name || data?.["Full Name"] || raw?.name,
-                        fname: data?.fname || data?.["Father's Name"] || raw?.fname,
-                        address: data?.address || data?.["Registered Address"] || raw?.address,
-                        mobile: data?.mobile || data?.["Mobile Number"] || raw?.mobile || phone,
-                        id: data?.id || data?.["Identity Number"] || raw?.id,
-                        email: data?.email || data?.["Email Address"] || raw?.email,
-                      },
-                    ]
-                  : [];
+              const subscriberRecords = rawList.length > 0 ? rawList : (payload.name ? [payload] : []);
 
-              const skipKeys = new Set(
-                subscriberRecords.length > 0
-                  ? [
-                      "name", "fname", "address", "id", "mobile", "email", "data", "found",
-                      "Full Name", "Father's Name", "Registered Address", "Identity Number", "Mobile Number", "Email Address", "Records Found"
-                    ]
-                  : ["data", "found"]
-              );
-
-              const otherEntries = Object.entries(data).filter(([k]) => !skipKeys.has(k));
+              // 3. Other top-level keys besides found and data
+              const skipTopKeys = new Set(["found", "data"]);
+              const otherEntries = Object.entries(payload).filter(([k]) => !skipTopKeys.has(k) && k !== "telecom" && k !== "rawResponse");
 
               return (
-                <div className="space-y-5">
-                  {/* Subscriber Profile Cards */}
+                <div className="space-y-4">
+                  {/* Top-level Status Blocks: found & data */}
+                  {(hasFound || (Array.isArray(payload.data) && payload.data.length === 0)) && (
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5">
+                      {hasFound && (
+                        <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800/80 flex items-center justify-between shadow-sm">
+                          <div>
+                            <p className="text-[11px] font-mono font-bold uppercase tracking-wider text-slate-400">found</p>
+                            <p className={`text-2xl font-mono font-black mt-0.5 ${foundCount && foundCount > 0 ? "text-emerald-400" : "text-amber-400"}`}>
+                              {String(payload.found)}
+                            </p>
+                          </div>
+                          <span className={`px-2.5 py-1 rounded-full text-xs font-bold border ${foundCount && foundCount > 0 ? "bg-emerald-500/10 text-emerald-400 border-emerald-500/30" : "bg-amber-500/10 text-amber-400 border-amber-500/30"}`}>
+                            {foundCount && foundCount > 0 ? `${foundCount} Record${foundCount > 1 ? "s" : ""} Found` : "0 Records (Not Found)"}
+                          </span>
+                        </div>
+                      )}
+
+                      {Array.isArray(payload.data) && payload.data.length === 0 && (
+                        <div className="p-4 rounded-xl bg-slate-900/80 border border-slate-800/80 flex items-center justify-between shadow-sm">
+                          <div>
+                            <p className="text-[11px] font-mono font-bold uppercase tracking-wider text-slate-400">data</p>
+                            <p className="text-sm font-mono font-bold text-slate-300 mt-1">[] (Empty Array)</p>
+                          </div>
+                          <span className="px-2.5 py-1 rounded-full text-xs font-bold bg-amber-500/10 text-amber-400 border border-amber-500/20">
+                            No Records
+                          </span>
+                        </div>
+                      )}
+                    </div>
+                  )}
+
+                  {/* If subscriber records are found */}
                   {subscriberRecords.length > 0 && (
                     <div className="space-y-4">
                       {subscriberRecords.map((rec: any, idx: number) => {
                         const cleanAddr = rec.address
                           ? String(rec.address).replace(/!+/g, ", ").replace(/^[\s,]+|[\s,]+$/g, "").trim()
                           : "";
+
+                        const knownRecKeys = new Set(["name", "fname", "mobile", "id", "email", "address"]);
+                        const extraRecFields = Object.entries(rec).filter(([k, v]) => !knownRecKeys.has(k) && v !== null && v !== undefined);
+
                         return (
                           <div
                             key={idx}
@@ -311,6 +329,15 @@ export function ResponseViewer({
                                   </div>
                                 </div>
                               )}
+
+                              {extraRecFields.map(([rk, rv]) => (
+                                <div key={rk} className="flex items-start gap-3 bg-slate-950/60 p-3 rounded-xl border border-slate-800/60">
+                                  <div>
+                                    <p className="text-[11px] text-slate-500 uppercase tracking-wider font-bold">{rk}</p>
+                                    <p className="font-mono text-slate-200 text-xs mt-0.5">{String(rv)}</p>
+                                  </div>
+                                </div>
+                              ))}
                             </div>
                           </div>
                         );
@@ -318,35 +345,28 @@ export function ResponseViewer({
                     </div>
                   )}
 
-                  {/* Telecom or other additional intelligence */}
+                  {/* Other Response Fields */}
                   {otherEntries.length > 0 && (
-                    <div className="space-y-2">
-                      {subscriberRecords.length > 0 && (
-                        <h4 className="text-xs font-bold uppercase tracking-wider text-slate-400 pt-2">
-                          Additional Telecom Intelligence
-                        </h4>
-                      )}
-                      <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-3.5">
-                        {otherEntries.map(([k, v]) => (
-                          <div
-                            key={k}
-                            className="p-3.5 rounded-xl bg-slate-50 dark:bg-slate-950/70 border border-slate-200 dark:border-slate-800/80 hover:border-indigo-500/30 transition-all"
-                          >
-                            <p className="text-[11px] font-medium text-slate-500 dark:text-slate-400 uppercase tracking-wider">
-                              {k}
-                            </p>
-                            <p className="text-sm font-semibold text-slate-900 dark:text-slate-100 mt-1 break-words">
-                              {typeof v === "boolean" ? (v ? "True / Yes" : "False / No") : String(v)}
-                            </p>
-                          </div>
-                        ))}
-                      </div>
+                    <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
+                      {otherEntries.map(([k, v]) => (
+                        <div
+                          key={k}
+                          className="p-3.5 rounded-xl bg-slate-900/70 border border-slate-800/80 hover:border-indigo-500/30 transition-all"
+                        >
+                          <p className="text-[11px] font-mono font-bold text-slate-400 uppercase tracking-wider">
+                            {k}
+                          </p>
+                          <p className="text-sm font-semibold text-slate-100 mt-1 break-words">
+                            {typeof v === "boolean" ? (v ? "True" : "False") : typeof v === "object" ? JSON.stringify(v) : String(v)}
+                          </p>
+                        </div>
+                      ))}
                     </div>
                   )}
 
-                  {subscriberRecords.length === 0 && otherEntries.length === 0 && (
-                    <div className="py-8 text-center text-slate-500 dark:text-slate-400 text-sm">
-                      No structured fields were extracted from this response. Check the Raw JSON tab for full details.
+                  {!hasFound && subscriberRecords.length === 0 && otherEntries.length === 0 && (
+                    <div className="py-8 text-center text-slate-400 text-sm">
+                      No response fields returned. Check the Complete Raw JSON Response tab.
                     </div>
                   )}
                 </div>
@@ -358,15 +378,6 @@ export function ResponseViewer({
             {renderJsonTree(raw || data)}
           </div>
         )}
-      </div>
-
-      {/* Privacy & Security Note */}
-      <div className="px-5 py-2.5 bg-slate-50/80 dark:bg-slate-950/40 border-t border-slate-200 dark:border-slate-800 text-[11px] text-slate-500 dark:text-slate-400 flex items-center justify-between">
-        <span className="flex items-center gap-1.5">
-          <ShieldCheck className="w-3.5 h-3.5 text-indigo-500" />
-          <span>End-to-end sanitized response. API credentials encrypted on server.</span>
-        </span>
-        <span>ID: {phone.slice(0, 4)}••••</span>
       </div>
     </div>
   );
