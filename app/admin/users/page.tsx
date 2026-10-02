@@ -285,13 +285,13 @@ export default function AdminUsersPage() {
                         </button>
                       </td>
                       <td className="py-3.5 px-4 text-right font-mono font-bold text-white text-sm">
-                        ₹{(u.wallet?.balance ?? 0).toFixed(2)}
+                        ₹{Number(u.wallet?.balance ?? 0).toFixed(2)}
                       </td>
                       <td className="py-3.5 px-4 text-center font-mono text-slate-300">
                         {u._count?.apiRequests ?? 0}
                       </td>
                       <td className="py-3.5 px-4 text-center text-slate-400">
-                        {new Date(u.createdAt).toLocaleDateString()}
+                        {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "-"}
                       </td>
                       <td className="py-3.5 px-4 text-right space-x-1.5 whitespace-nowrap">
                         {/* Adjust Balance Button */}
@@ -381,7 +381,7 @@ export default function AdminUsersPage() {
               <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 flex justify-between items-center">
                 <span className="text-slate-400">Current Balance:</span>
                 <span className="font-mono font-bold text-white text-sm">
-                  ₹{(walletModalUser.wallet?.balance ?? 0).toFixed(2)}
+                  ₹{Number(walletModalUser.wallet?.balance ?? 0).toFixed(2)}
                 </span>
               </div>
 

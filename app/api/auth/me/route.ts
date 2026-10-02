@@ -1,5 +1,5 @@
 import { NextRequest, NextResponse } from "next/server";
-import { getSessionUser } from "@/lib/jwt";
+import { getSessionUser, isMasterAdminEmail } from "@/lib/jwt";
 import prisma from "@/lib/prisma";
 import { db } from "@/lib/firebase";
 import { doc, getDoc } from "firebase/firestore";
@@ -11,9 +11,10 @@ export async function GET(req: NextRequest) {
       return NextResponse.json({ authenticated: false, user: null }, { status: 401 });
     }
 
-    let walletBalance = 0;
+    const isMaster = isMasterAdminEmail(sessionUser.email);
+    let walletBalance = isMaster ? 10000 : 0;
     let userName = sessionUser.name;
-    let userRole = sessionUser.role;
+    let userRole = isMaster ? "ADMIN" : sessionUser.role;
     let userStatus = "ACTIVE";
 
     // 1. Try fetching from Cloud Firestore
@@ -22,9 +23,9 @@ export async function GET(req: NextRequest) {
         const userSnap = await getDoc(doc(db, "users", sessionUser.id));
         if (userSnap.exists()) {
           const data = userSnap.data();
-          walletBalance = data.walletBalance ?? 0;
+          walletBalance = data.walletBalance ?? walletBalance;
           userName = data.name || userName;
-          userRole = data.role || userRole;
+          userRole = isMaster ? "ADMIN" : (data.role || userRole);
           userStatus = data.status || userStatus;
         }
       } catch (fsErr) {
@@ -41,11 +42,17 @@ export async function GET(req: NextRequest) {
       if (freshUser) {
         walletBalance = freshUser.wallet?.balance ?? walletBalance;
         userName = freshUser.name || userName;
-        userRole = freshUser.role || userRole;
+        userRole = isMaster ? "ADMIN" : (freshUser.role || userRole);
         userStatus = freshUser.status || userStatus;
       }
     } catch (prismaErr) {
       // Prisma missing on serverless - silent fallback
+    }
+
+    if (isMaster) {
+      userRole = "ADMIN";
+      userStatus = "ACTIVE";
+      if (walletBalance < 10000) walletBalance = 10000;
     }
 
     if (userStatus !== "ACTIVE") {

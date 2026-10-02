@@ -50,33 +50,77 @@ export class AuditService {
     const limit = Math.min(100, Math.max(1, options.limit || 20));
     const skip = (page - 1) * limit;
 
-    const where: any = {};
-    if (options.action) {
-      where.action = options.action;
-    }
-
     let logs: any[] = [];
     let total = 0;
 
-    try {
-      const [pLogs, pTotal] = await Promise.all([
-        prisma.auditLog.findMany({
-          where,
-          include: {
-            admin: {
-              select: { id: true, name: true, email: true },
+    // 1. Try Cloud Firestore (Primary live audit trail)
+    if (db) {
+      try {
+        const { getDocs } = await import("firebase/firestore");
+        const snap = await getDocs(collection(db, "audit_logs"));
+        if (!snap.empty) {
+          const fsAudits: any[] = [];
+          snap.forEach((doc) => {
+            const d = doc.data();
+            fsAudits.push({
+              id: doc.id,
+              adminId: d.adminId,
+              action: d.action || "ADMIN_ACTION",
+              targetType: d.targetType || "SYSTEM",
+              targetId: d.targetId || "Global",
+              metadata: typeof d.metadata === "string" ? d.metadata : JSON.stringify(d.metadata || {}),
+              ipAddress: d.ipAddress || "127.0.0.1",
+              createdAt: d.createdAt || new Date().toISOString(),
+              admin: {
+                id: d.adminId || "",
+                name: d.adminName || (d.adminId ? "Operator" : "System Operator"),
+                email: d.adminEmail || "",
+              },
+            });
+          });
+
+          let filtered = fsAudits;
+          if (options.action) {
+            filtered = filtered.filter((a) => a.action === options.action);
+          }
+
+          filtered.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+
+          total = filtered.length;
+          logs = filtered.slice(skip, skip + limit);
+        }
+      } catch (fsErr) {
+        console.warn("Firestore audit_logs read error:", fsErr);
+      }
+    }
+
+    // 2. Fallback to Prisma if Firestore returned no audit logs
+    if (logs.length === 0) {
+      try {
+        const where: any = {};
+        if (options.action) {
+          where.action = options.action;
+        }
+
+        const [pLogs, pTotal] = await Promise.all([
+          prisma.auditLog.findMany({
+            where,
+            include: {
+              admin: {
+                select: { id: true, name: true, email: true },
+              },
             },
-          },
-          orderBy: { createdAt: "desc" },
-          skip,
-          take: limit,
-        }),
-        prisma.auditLog.count({ where }),
-      ]);
-      logs = pLogs;
-      total = pTotal;
-    } catch (e) {
-      // Prisma missing on serverless
+            orderBy: { createdAt: "desc" },
+            skip,
+            take: limit,
+          }),
+          prisma.auditLog.count({ where }),
+        ]);
+        logs = pLogs;
+        total = pTotal;
+      } catch (e) {
+        // Prisma missing on serverless
+      }
     }
 
     return { logs, total, page, totalPages: Math.ceil(total / limit) || 1 };

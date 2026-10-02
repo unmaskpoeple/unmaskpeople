@@ -259,20 +259,26 @@ export class ReferralService {
    */
   static async getAllReferralsAdmin() {
     const settings = await SettingsService.getAllSettings();
-    const referrals = await prisma.referral.findMany({
-      include: {
-        referrer: { select: { id: true, name: true, email: true } },
-        referredUser: { select: { id: true, name: true, email: true } },
-      },
-      orderBy: { createdAt: "desc" },
-    });
+    let referrals: any[] = [];
+
+    try {
+      referrals = await prisma.referral.findMany({
+        include: {
+          referrer: { select: { id: true, name: true, email: true } },
+          referredUser: { select: { id: true, name: true, email: true } },
+        },
+        orderBy: { createdAt: "desc" },
+      });
+    } catch (e) {
+      console.warn("Prisma referrals fetch warning:", e);
+    }
 
     const totalReferrals = referrals.length;
     const completedCount = referrals.filter((r) => r.status === "COMPLETED").length;
     const pendingCount = referrals.filter((r) => r.status === "PENDING").length;
     const totalBonusPaid = referrals
       .filter((r) => r.status === "COMPLETED")
-      .reduce((acc, r) => acc + r.rewardAmount, 0);
+      .reduce((acc, r) => acc + (r.rewardAmount || 0), 0);
 
     return {
       settings: {

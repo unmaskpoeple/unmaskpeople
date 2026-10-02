@@ -291,7 +291,7 @@ export default function AdminApisPage() {
                   </div>
 
                   <span className="font-mono text-xs px-2.5 py-1 rounded-lg bg-slate-950 border border-slate-800 text-violet-400 font-bold">
-                    ₹{api.cost.toFixed(2)}/req
+                    ₹{Number(api.cost ?? 3.5).toFixed(2)}/req
                   </span>
                 </div>
 

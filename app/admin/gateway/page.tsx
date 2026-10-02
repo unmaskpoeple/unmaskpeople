@@ -497,7 +497,7 @@ export default function AdminGatewayPage() {
 
                           <td className="py-3.5 px-3">
                             <span className="font-mono font-black text-emerald-400 text-sm">
-                              ₹{Number(dep.amount).toFixed(2)}
+                              ₹{Number(dep.amount || 0).toFixed(2)}
                             </span>
                           </td>
 

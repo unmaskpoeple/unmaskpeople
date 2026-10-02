@@ -158,7 +158,7 @@ export default function AdminReferralsPage() {
             </div>
             <div className="mt-3">
               <span className="text-3xl font-extrabold text-white">
-                ₹{(data?.stats?.totalBonusPaid ?? 0).toFixed(2)}
+                ₹{Number(data?.stats?.totalBonusPaid ?? 0).toFixed(2)}
               </span>
             </div>
             <p className="text-xs text-emerald-400 mt-2 font-semibold">Credited to referrer wallets</p>
@@ -404,7 +404,7 @@ export default function AdminReferralsPage() {
                         </td>
 
                         <td className="py-3 px-4 text-right font-mono font-bold text-white">
-                          ₹{ref.rewardAmount?.toFixed(2) || "9.00"}
+                          ₹{Number(ref.rewardAmount ?? 9).toFixed(2)}
                         </td>
 
                         <td className="py-3 px-4 text-right">

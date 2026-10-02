@@ -15,6 +15,12 @@ import {
   ShieldAlert,
   Cpu,
   Layers,
+  AlertTriangle,
+  ArrowRight,
+  QrCode,
+  FileCheck2,
+  Settings,
+  LogIn,
 } from "lucide-react";
 import {
   AreaChart,
@@ -33,17 +39,28 @@ import Link from "next/link";
 export default function AdminOverviewPage() {
   const [data, setData] = useState<any>(null);
   const [loading, setLoading] = useState(true);
+  const [errorMsg, setErrorMsg] = useState<string | null>(null);
+  const [isMounted, setIsMounted] = useState(false);
+
+  useEffect(() => {
+    setIsMounted(true);
+  }, []);
 
   const fetchOverview = async () => {
     setLoading(true);
+    setErrorMsg(null);
     try {
-      const res = await fetch("/api/admin/overview");
+      const res = await fetch("/api/admin/overview", {
+        cache: "no-store",
+      });
+      const json = await res.json();
       if (res.ok) {
-        const json = await res.json();
         setData(json);
+      } else {
+        setErrorMsg(json.error || `HTTP ${res.status}: Failed to load administrative overview`);
       }
-    } catch (e) {
-      console.error(e);
+    } catch (e: any) {
+      setErrorMsg(e.message || "Network error loading administrative overview. Please check connection.");
     } finally {
       setLoading(false);
     }
@@ -55,6 +72,20 @@ export default function AdminOverviewPage() {
 
   const stats = data?.stats;
 
+  const formatCurrency = (val: any) => {
+    const n = Number(val);
+    return isNaN(n) ? "0.00" : n.toFixed(2);
+  };
+
+  const formatTime = (dateStr: any) => {
+    try {
+      const d = new Date(dateStr);
+      return isNaN(d.getTime()) ? "Just now" : d.toLocaleTimeString();
+    } catch {
+      return "Just now";
+    }
+  };
+
   return (
     <div className="flex-1 flex flex-col bg-slate-950 text-slate-100 min-h-screen">
       <AdminTopbar
@@ -62,7 +93,106 @@ export default function AdminOverviewPage() {
         subtitle="Global telemetry, aggregate subscriber liquidity, revenue analytics, and system health"
       />
 
-      <main className="flex-1 p-6 max-w-7xl w-full mx-auto space-y-6">
+      <main className="flex-1 p-4 sm:p-6 max-w-7xl w-full mx-auto space-y-6">
+        {/* Error Notification Banner if Overview Fetch Failed */}
+        {errorMsg && (
+          <div className="p-4 rounded-2xl bg-rose-950/60 border border-rose-800/80 flex flex-col sm:flex-row sm:items-center justify-between gap-3 text-xs text-rose-200 shadow-xl">
+            <div className="flex items-center gap-3">
+              <AlertTriangle className="w-5 h-5 text-rose-400 flex-shrink-0" />
+              <div>
+                <p className="font-bold text-sm text-white">Administrative Telemetry Alert</p>
+                <p className="text-rose-300">{errorMsg}</p>
+              </div>
+            </div>
+            <div className="flex items-center gap-2 self-end sm:self-auto">
+              <button
+                onClick={fetchOverview}
+                className="px-3 py-1.5 rounded-xl bg-slate-900 hover:bg-slate-800 border border-rose-700/50 text-white font-semibold transition-all flex items-center gap-1.5"
+              >
+                <RefreshCw className="w-3.5 h-3.5" />
+                <span>Retry</span>
+              </button>
+              {errorMsg.toLowerCase().includes("auth") || errorMsg.toLowerCase().includes("forbidden") ? (
+                <Link
+                  href="/admin/login"
+                  className="px-3 py-1.5 rounded-xl bg-violet-600 hover:bg-violet-500 text-white font-bold transition-all flex items-center gap-1.5 shadow-md shadow-violet-600/30"
+                >
+                  <LogIn className="w-3.5 h-3.5" />
+                  <span>Admin Login</span>
+                </Link>
+              ) : null}
+            </div>
+          </div>
+        )}
+
+        {/* Quick Navigation Action Pills */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 lg:grid-cols-5 gap-2.5">
+          <Link
+            href="/admin/gateway"
+            className="p-3 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-violet-500/50 hover:bg-slate-900 transition-all flex items-center gap-2.5 group"
+          >
+            <div className="w-8 h-8 rounded-xl bg-indigo-500/10 text-indigo-400 flex items-center justify-center group-hover:scale-105 transition-transform">
+              <QrCode className="w-4 h-4" />
+            </div>
+            <div className="truncate">
+              <span className="text-xs font-bold text-slate-200 block truncate">UPI Deposits</span>
+              <span className="text-[10px] text-slate-400">Verify UTRs</span>
+            </div>
+          </Link>
+
+          <Link
+            href="/admin/users"
+            className="p-3 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-violet-500/50 hover:bg-slate-900 transition-all flex items-center gap-2.5 group"
+          >
+            <div className="w-8 h-8 rounded-xl bg-violet-500/10 text-violet-400 flex items-center justify-center group-hover:scale-105 transition-transform">
+              <Users className="w-4 h-4" />
+            </div>
+            <div className="truncate">
+              <span className="text-xs font-bold text-slate-200 block truncate">Subscribers</span>
+              <span className="text-[10px] text-slate-400">Adjust balances</span>
+            </div>
+          </Link>
+
+          <Link
+            href="/admin/logs"
+            className="p-3 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-violet-500/50 hover:bg-slate-900 transition-all flex items-center gap-2.5 group"
+          >
+            <div className="w-8 h-8 rounded-xl bg-sky-500/10 text-sky-400 flex items-center justify-center group-hover:scale-105 transition-transform">
+              <Activity className="w-4 h-4" />
+            </div>
+            <div className="truncate">
+              <span className="text-xs font-bold text-slate-200 block truncate">Traffic Logs</span>
+              <span className="text-[10px] text-slate-400">Live Lookups</span>
+            </div>
+          </Link>
+
+          <Link
+            href="/admin/apis"
+            className="p-3 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-violet-500/50 hover:bg-slate-900 transition-all flex items-center gap-2.5 group"
+          >
+            <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center group-hover:scale-105 transition-transform">
+              <Cpu className="w-4 h-4" />
+            </div>
+            <div className="truncate">
+              <span className="text-xs font-bold text-slate-200 block truncate">API Providers</span>
+              <span className="text-[10px] text-slate-400">Configure & test</span>
+            </div>
+          </Link>
+
+          <Link
+            href="/admin/settings"
+            className="p-3 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-violet-500/50 hover:bg-slate-900 transition-all flex items-center gap-2.5 group col-span-2 sm:col-span-4 lg:col-span-1"
+          >
+            <div className="w-8 h-8 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center group-hover:scale-105 transition-transform">
+              <Settings className="w-4 h-4" />
+            </div>
+            <div className="truncate">
+              <span className="text-xs font-bold text-slate-200 block truncate">Platform Policy</span>
+              <span className="text-[10px] text-slate-400">Pricing & maintenance</span>
+            </div>
+          </Link>
+        </div>
+
         {/* Metric Cards Row 1: Users, Revenue & Liquidity */}
         <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-5">
           {/* Total Revenue */}
@@ -77,7 +207,7 @@ export default function AdminOverviewPage() {
             </div>
             <div className="mt-3">
               <span className="text-3xl font-extrabold text-white">
-                ₹{(stats?.totalRevenue ?? 0).toFixed(2)}
+                ₹{formatCurrency(stats?.totalRevenue)}
               </span>
             </div>
             <div className="mt-3 flex items-center justify-between text-xs text-slate-400">
@@ -98,7 +228,7 @@ export default function AdminOverviewPage() {
             </div>
             <div className="mt-3">
               <span className="text-3xl font-extrabold text-white">
-                ₹{(stats?.totalDeposits ?? 0).toFixed(2)}
+                ₹{formatCurrency(stats?.totalDeposits)}
               </span>
             </div>
             <div className="mt-3 flex items-center justify-between text-xs text-slate-400">
@@ -119,7 +249,7 @@ export default function AdminOverviewPage() {
             </div>
             <div className="mt-3">
               <span className="text-3xl font-extrabold text-white">
-                {stats?.totalUsers ?? 0}
+                {stats?.totalUsers ?? (loading ? "..." : 0)}
               </span>
             </div>
             <div className="mt-3 flex items-center justify-between text-xs text-slate-400">
@@ -140,7 +270,7 @@ export default function AdminOverviewPage() {
             </div>
             <div className="mt-3">
               <span className="text-3xl font-extrabold text-white">
-                {stats?.totalRequests ?? 0}
+                {stats?.totalRequests ?? (loading ? "..." : 0)}
               </span>
             </div>
             <div className="mt-3 flex items-center justify-between text-xs text-slate-400">
@@ -161,14 +291,15 @@ export default function AdminOverviewPage() {
               </div>
               <button
                 onClick={fetchOverview}
-                className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white"
+                className="p-1.5 rounded-lg hover:bg-slate-800 text-slate-400 hover:text-white transition-colors"
+                title="Refresh Analytics"
               >
                 <RefreshCw className={`w-3.5 h-3.5 ${loading ? "animate-spin" : ""}`} />
               </button>
             </div>
 
             <div className="h-64 w-full">
-              {data?.chartData && data.chartData.length > 0 ? (
+              {isMounted && data?.chartData && data.chartData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <AreaChart data={data.chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <defs>
@@ -213,7 +344,11 @@ export default function AdminOverviewPage() {
                     />
                   </AreaChart>
                 </ResponsiveContainer>
-              ) : null}
+              ) : (
+                <div className="h-full flex items-center justify-center text-xs text-slate-500">
+                  {loading ? "Loading telemetry trends..." : "No search trend data available yet."}
+                </div>
+              )}
             </div>
           </div>
 
@@ -225,12 +360,12 @@ export default function AdminOverviewPage() {
                 <p className="text-xs text-slate-400">Total deposits vs daily revenue charges</p>
               </div>
               <span className="text-xs font-mono text-emerald-400 bg-emerald-950/60 border border-emerald-800/40 px-2.5 py-1 rounded-lg">
-                ₹{(stats?.totalWalletBalance ?? 0).toFixed(2)} in circulation
+                ₹{formatCurrency(stats?.totalWalletBalance)} in circulation
               </span>
             </div>
 
             <div className="h-64 w-full">
-              {data?.chartData && data.chartData.length > 0 ? (
+              {isMounted && data?.chartData && data.chartData.length > 0 ? (
                 <ResponsiveContainer width="100%" height="100%">
                   <BarChart data={data.chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <CartesianGrid strokeDasharray="3 3" stroke="#1e293b" opacity={0.6} />
@@ -249,7 +384,11 @@ export default function AdminOverviewPage() {
                     <Bar name="Revenue (₹)" dataKey="revenue" fill="#10b981" radius={[4, 4, 0, 0]} />
                   </BarChart>
                 </ResponsiveContainer>
-              ) : null}
+              ) : (
+                <div className="h-full flex items-center justify-center text-xs text-slate-500">
+                  {loading ? "Loading financial trends..." : "No financial ledger data available yet."}
+                </div>
+              )}
             </div>
           </div>
         </div>
@@ -262,9 +401,10 @@ export default function AdminOverviewPage() {
               <h3 className="font-bold text-white text-base">Latest Operational API Traffic</h3>
               <Link
                 href="/admin/logs"
-                className="text-xs text-violet-400 hover:text-violet-300 font-semibold"
+                className="text-xs text-violet-400 hover:text-violet-300 font-semibold flex items-center gap-1"
               >
-                View all operational logs →
+                <span>View all logs</span>
+                <ArrowRight className="w-3 h-3" />
               </Link>
             </div>
 
@@ -281,7 +421,7 @@ export default function AdminOverviewPage() {
                           {req.maskedPhone}
                         </span>
                         <span
-                          className={`text-[10px] px-1.5 py-0.2 rounded font-bold ${
+                          className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
                             req.status === "SUCCESSFUL"
                               ? "bg-emerald-500/10 text-emerald-400"
                               : "bg-rose-500/10 text-rose-400"
@@ -291,13 +431,13 @@ export default function AdminOverviewPage() {
                         </span>
                       </div>
                       <p className="text-[11px] text-slate-500 mt-0.5">
-                        By {req.user?.name || "User"} • {req.apiConfig?.name || "Global API"}
+                        By {req.user?.name || "Subscriber"} • {req.apiConfig?.name || "Core Telecom API"}
                       </p>
                     </div>
 
                     <div className="text-right">
                       <p className="font-mono font-bold text-white">
-                        {req.isRefunded ? "₹0.00" : `₹${req.amountCharged.toFixed(2)}`}
+                        {req.isRefunded ? "₹0.00" : `₹${formatCurrency(req.amountCharged)}`}
                       </p>
                       <p className="text-[10px] text-slate-500">
                         {req.latencyMs ? `${req.latencyMs}ms` : "-"}
@@ -307,7 +447,7 @@ export default function AdminOverviewPage() {
                 ))
               ) : (
                 <div className="py-8 text-center text-slate-500 text-xs">
-                  No requests logged yet.
+                  {loading ? "Loading operational requests..." : "No requests logged yet."}
                 </div>
               )}
             </div>
@@ -319,9 +459,10 @@ export default function AdminOverviewPage() {
               <h3 className="font-bold text-white text-base">Administrative Audit Trail</h3>
               <Link
                 href="/admin/audits"
-                className="text-xs text-violet-400 hover:text-violet-300 font-semibold"
+                className="text-xs text-violet-400 hover:text-violet-300 font-semibold flex items-center gap-1"
               >
-                View complete audits →
+                <span>View complete audits</span>
+                <ArrowRight className="w-3 h-3" />
               </Link>
             </div>
 
@@ -337,17 +478,17 @@ export default function AdminOverviewPage() {
                         {aud.action}
                       </span>
                       <span className="text-[10px] text-slate-500 font-mono">
-                        {new Date(aud.createdAt).toLocaleTimeString()}
+                        {formatTime(aud.createdAt)}
                       </span>
                     </div>
                     <p className="text-[11px] text-slate-400">
-                      Admin: <strong className="text-slate-300">{aud.admin?.name || "System"}</strong> • Target: {aud.targetType} ({aud.targetId || "Global"})
+                      Operator: <strong className="text-slate-300">{aud.admin?.name || "System"}</strong> • Target: {aud.targetType} ({aud.targetId || "Global"})
                     </p>
                   </div>
                 ))
               ) : (
                 <div className="py-8 text-center text-slate-500 text-xs">
-                  No audit logs recorded yet.
+                  {loading ? "Loading audit trail..." : "No audit logs recorded yet."}
                 </div>
               )}
             </div>
