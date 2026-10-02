@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Sparkles,
@@ -27,6 +27,19 @@ const PRESET_AMOUNTS = [100, 250, 500, 1000];
 export default function ServicesHubPage() {
   const { user, logout, updateBalanceLocally } = useAuth();
   const { toast } = useToast();
+
+  const [phoneCost, setPhoneCost] = useState<number>(3.5);
+
+  useEffect(() => {
+    fetch("/api/public-settings", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((data) => {
+        if (typeof data.phoneCost === "number") {
+          setPhoneCost(data.phoneCost);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Add Money Modal State
   const [showAddMoneyModal, setShowAddMoneyModal] = useState(false);
@@ -171,7 +184,7 @@ export default function ServicesHubPage() {
       iconColor: "text-cyan-400",
       iconBg: "bg-cyan-950/80 border-cyan-800/60 shadow-cyan-500/10",
       borderHover: "hover:border-cyan-500/50 hover:shadow-cyan-500/10",
-      accentBadge: "Cost: ₹3.50 / query",
+      accentBadge: `Cost: ₹${phoneCost.toFixed(2)} / query`,
       badgeColor: "text-cyan-400 bg-cyan-950/60 border-cyan-800/50",
       href: "/search/phone",
       buttonText: "Open Phone Search",

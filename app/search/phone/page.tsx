@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState } from "react";
+import React, { useState, useEffect } from "react";
 import Link from "next/link";
 import {
   Sparkles,
@@ -17,13 +17,11 @@ import {
   Zap,
   Lock,
   Phone,
-  Gift,
 } from "lucide-react";
 import { BrandLogo } from "@/components/brand-logo";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useToast } from "@/components/ui/toast";
 import { ResponseViewer } from "@/components/response-viewer";
-import { ReferralModal } from "@/components/referral-modal";
 import { SiteFooter } from "@/components/site-footer";
 
 const COUNTRY_CODE = "+91";
@@ -48,8 +46,19 @@ export default function PhoneSearchPage() {
   const [isCustom, setIsCustom] = useState(false);
   const [recharging, setRecharging] = useState(false);
 
-  // Referral Modal State
-  const [showReferralModal, setShowReferralModal] = useState(false);
+  // Dynamic Query Pricing
+  const [phoneCost, setPhoneCost] = useState<number>(3.5);
+
+  useEffect(() => {
+    fetch("/api/public-settings", { cache: "no-store" })
+      .then((r) => r.json())
+      .then((data) => {
+        if (typeof data.phoneCost === "number") {
+          setPhoneCost(data.phoneCost);
+        }
+      })
+      .catch(() => {});
+  }, []);
 
   // Login Prompt Modal State
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
@@ -98,8 +107,8 @@ export default function PhoneSearchPage() {
       return;
     }
 
-    if (user.walletBalance < 3.5) {
-      setSearchError(`Insufficient balance (₹${user.walletBalance.toFixed(2)}). Minimum ₹3.50 required per lookup. Please click 'Add Money' at the top.`);
+    if (user.walletBalance < phoneCost) {
+      setSearchError(`Insufficient balance (₹${user.walletBalance.toFixed(2)}). Minimum ₹${phoneCost.toFixed(2)} required per lookup. Please click 'Add Money' at the top.`);
       toast.warning("Low Balance", "Please top up your wallet to continue searching.");
       return;
     }
@@ -257,16 +266,6 @@ export default function PhoneSearchPage() {
           <BrandLogo href="/" size="md" />
 
           <div className="flex items-center gap-2 sm:gap-3">
-            {/* Refer & Earn button */}
-            <button
-              type="button"
-              onClick={() => setShowReferralModal(true)}
-              className="px-3 sm:px-4 py-2 rounded-xl bg-violet-950/70 border border-violet-800/60 hover:border-violet-500/80 text-violet-300 hover:text-white font-extrabold text-xs transition-all flex items-center gap-1.5 shadow-sm hover:scale-105 active:scale-95"
-            >
-              <Gift className="w-3.5 h-3.5 text-violet-400" />
-              <span>Refer & Earn ₹9</span>
-            </button>
-
             {user ? (
               <div className="flex items-center gap-2 bg-slate-900/80 border border-slate-800/90 rounded-2xl p-1.5 shadow-inner">
                 <div className="px-3 py-1 text-xs font-mono font-bold text-slate-300 hidden sm:flex items-center gap-1.5">
@@ -328,7 +327,7 @@ export default function PhoneSearchPage() {
             <span>Back to All Services</span>
           </Link>
           <span className="text-[11px] font-mono text-cyan-400 bg-cyan-950/40 border border-cyan-800/40 px-2.5 py-1 rounded-full">
-            Cost: ₹3.50 / query
+            Cost: ₹{phoneCost.toFixed(2)} / query
           </span>
         </div>
 
@@ -573,12 +572,6 @@ export default function PhoneSearchPage() {
           </div>
         </div>
       )}
-
-      {/* Refer & Earn Modal */}
-      <ReferralModal
-        isOpen={showReferralModal}
-        onClose={() => setShowReferralModal(false)}
-      />
 
       {/* Universal Compliant Site Footer */}
       <SiteFooter />

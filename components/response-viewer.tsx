@@ -256,8 +256,13 @@ export function ResponseViewer({
                                 <div>
                                   <div className="flex items-center gap-2">
                                     <h3 className="text-lg font-black text-white tracking-wide">
-                                      {rec.name || "Verified Subscriber"}
+                                      {rec.name || "N/A"}
                                     </h3>
+                                    {subscriberRecords.length > 1 && (
+                                      <span className="px-2 py-0.5 rounded-full bg-cyan-500/15 text-cyan-300 border border-cyan-500/30 text-[10px] font-mono font-bold">
+                                        Record {idx + 1} of {subscriberRecords.length}
+                                      </span>
+                                    )}
                                     <span className="px-2.5 py-0.5 rounded-full bg-emerald-500/15 text-emerald-400 border border-emerald-500/30 text-[10px] font-black uppercase tracking-wider flex items-center gap-1">
                                       <CheckCircle2 className="w-3 h-3 text-emerald-400" />
                                       <span>Matched</span>
@@ -274,8 +279,8 @@ export function ResponseViewer({
                               {rec.id && (
                                 <div className="flex items-center gap-2 bg-slate-950 border border-slate-800/90 px-3.5 py-1.5 rounded-xl font-mono text-xs shadow-inner">
                                   <Hash className="w-3.5 h-3.5 text-cyan-400" />
-                                  <span className="text-slate-400 text-[11px] font-semibold">ID:</span>
-                                  <span className="text-cyan-300 font-bold tracking-wider">{rec.id}</span>
+                                  <span className="text-slate-400 text-[11px] font-semibold">GOV ID:</span>
+                                  <span className="text-cyan-300 font-bold tracking-wider">{String(rec.id).trim()}</span>
                                 </div>
                               )}
                             </div>
@@ -290,10 +295,10 @@ export function ResponseViewer({
                               </div>
 
                               <div className="flex items-start gap-3 bg-slate-950/60 p-3 rounded-xl border border-slate-800/60">
-                                <Mail className="w-4 h-4 text-violet-400 mt-0.5 shrink-0" />
+                                <Hash className="w-4 h-4 text-cyan-400 mt-0.5 shrink-0" />
                                 <div>
-                                  <p className="text-[11px] text-slate-500 uppercase tracking-wider font-bold">Email Address</p>
-                                  <p className="font-mono text-slate-300 mt-0.5">{rec.email || "Not Provided"}</p>
+                                  <p className="text-[11px] text-slate-500 uppercase tracking-wider font-bold">GOV ID</p>
+                                  <p className="font-mono font-bold text-cyan-300 text-sm mt-0.5">{rec.id ? String(rec.id).trim() : "N/A"}</p>
                                 </div>
                               </div>
 

@@ -81,10 +81,26 @@ const DEFAULT_SETTINGS: SystemSettingsMap = {
 
 export class SettingsService {
   static async getAllSettings(): Promise<SystemSettingsMap> {
+    let settings: any = { ...DEFAULT_SETTINGS };
+
+    // 1. Try Cloud Firestore (primary live cloud source of truth)
+    try {
+      const { db } = await import("@/lib/firebase");
+      if (db) {
+        const { doc, getDoc } = await import("firebase/firestore");
+        const snap = await getDoc(doc(db, "system", "settings"));
+        if (snap.exists()) {
+          const fsData = snap.data();
+          return { ...settings, ...fsData } as SystemSettingsMap;
+        }
+      }
+    } catch (fsErr) {
+      // Continue to Prisma fallback
+    }
+
+    // 2. Try Prisma fallback
     try {
       const records = await prisma.systemSetting.findMany();
-      const settings: any = { ...DEFAULT_SETTINGS };
-
       for (const rec of records) {
         if (rec.key in settings) {
           if (rec.value === "true") {
@@ -106,23 +122,9 @@ export class SettingsService {
           }
         }
       }
-
       return settings as SystemSettingsMap;
     } catch {
-      // 2. Try Cloud Firestore
-      try {
-        const { db } = await import("@/lib/firebase");
-        if (db) {
-          const { doc, getDoc } = await import("firebase/firestore");
-          const snap = await getDoc(doc(db, "system", "settings"));
-          if (snap.exists()) {
-            return { ...DEFAULT_SETTINGS, ...snap.data() } as SystemSettingsMap;
-          }
-        }
-      } catch (fsErr) {
-        // Fallback
-      }
-      return DEFAULT_SETTINGS;
+      return settings as SystemSettingsMap;
     }
   }
 

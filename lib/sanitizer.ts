@@ -27,7 +27,7 @@ export function sanitizeData(data: any, secretToScrub?: string): any {
     // Scrub typical authorization tokens or live secret key patterns
     cleaned = cleaned.replace(/Bearer\s+([A-Za-z0-9_\-\.]{8,})/gi, "Bearer ••••••••••••••••");
     cleaned = cleaned.replace(/(api[-_]?key|secret|token)=([^&\s]+)/gi, "$1=••••••••••••••••");
-    return escapeHtml(cleaned);
+    return cleaned;
   }
 
   if (Array.isArray(data)) {
@@ -50,12 +50,11 @@ export function sanitizeData(data: any, secretToScrub?: string): any {
         lowerKey.includes("auth_token") ||
         lowerKey === "authorization"
       ) {
-        cleanObj[escapeHtml(key)] = "••••••••••••••••";
+        cleanObj[key] = "••••••••••••••••";
         continue;
       }
 
-      const cleanKey = escapeHtml(key);
-      cleanObj[cleanKey] = sanitizeData(value, secretToScrub);
+      cleanObj[key] = sanitizeData(value, secretToScrub);
     }
     return cleanObj;
   }

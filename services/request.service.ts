@@ -186,10 +186,10 @@ export class RequestService {
         name: "SpyDox Subscriber Gateway",
         endpoint: defaultApiUrl,
         method: (process.env.PHONE_SEARCH_API_METHOD || "GET").toUpperCase(),
-        cost: 3.5,
+        cost: Number(settings.default_cost_per_request ?? 3.5),
         isActive: true,
         successField: "found",
-        successValues: "1,true,success,200,ok",
+        successValues: "1,2,3,4,5,true,success,200,ok",
         messageField: "message",
         resultField: "data",
         phoneParameter: process.env.PHONE_SEARCH_PARAM_NAME || "term",
@@ -199,7 +199,7 @@ export class RequestService {
       };
     }
 
-    const requestCost = apiConfig?.cost ?? settings.default_cost_per_request ?? 3.5;
+    const requestCost = Number(settings.default_cost_per_request ?? apiConfig?.cost ?? 3.5);
 
     // 5. Check Wallet Balance Prior to Calling API
     const currentWallet = user.wallet || (await WalletService.getWallet(userId));
@@ -278,7 +278,10 @@ export class RequestService {
     if (isLiveApiResponse) {
       const raw = executionResult.rawResponse;
       const isFound =
+        (typeof raw.found === "number" && raw.found > 0) ||
+        raw.found === true ||
         raw.found === 1 ||
+        raw.found === "1" ||
         (Array.isArray(raw.data) && raw.data.length > 0);
 
       if (!isFound) {
@@ -319,7 +322,7 @@ export class RequestService {
           latencyMs: executionResult.latencyMs,
           amountCharged: 0.0,
           isRefunded: true,
-          message: "No subscriber records found for this phone number. ₹3.50 refunded to wallet.",
+          message: `No subscriber records found for this phone number. ₹${requestCost.toFixed(2)} refunded to wallet.`,
           data: {
             "Records Found": 0,
             "Notice": "No registered subscriber matching this mobile number in provider registry.",
@@ -331,71 +334,50 @@ export class RequestService {
         };
       }
     } else if (!executionResult || !executionResult.success) {
-      const telecomData = this.resolveTelecomDetails(cleanedDigits, countryCode);
+      // API call failed: refund fee and return honest provider error without generating fake data
+      await WalletService.refundForFailedRequest({
+        userId,
+        amount: requestCost,
+        referenceId: apiRequest.id,
+        reason: `Lookup provider error: ${executionResult?.message || "Provider unreachable"}`,
+      });
 
-      let sampleSubscriber: any = null;
-      if (cleanedDigits === "6296218181") {
-        sampleSubscriber = {
-          mobile: "6296218181",
-          name: "Kurban Sekh",
-          fname: "abdul salam",
-          address: " s/o abdul salam! 3652!bolatuli!!uttar balatuli po- jatradanga!kaluari!malda!West Bengal!732141 ",
-          email: null,
-          id: "444431995061",
-        };
-      } else if (cleanedDigits === "7892938082") {
-        sampleSubscriber = {
-          mobile: "7892938082",
-          name: "Suresh Kumar",
-          fname: "Ramesh Kumar",
-          address: " s/o Ramesh Kumar! 142/B!Indiranagar!!100 Feet Road!Bangalore!Karnataka!560038 ",
-          email: null,
-          id: "444498210394",
-        };
-      } else {
-        sampleSubscriber = {
-          mobile: cleanedDigits,
-          name: "Verified Subscriber",
-          fname: "Registered Guardian",
-          address: ` s/o Registered Guardian! Plot ${cleanedDigits.slice(-3)}!Near Central Market!!${telecomData.circle}!India `,
-          email: null,
-          id: `4444${cleanedDigits.slice(2)}`,
-        };
+      const telecomData = this.resolveTelecomDetails(cleanedDigits, countryCode);
+      const updatedWallet = await WalletService.getWallet(userId);
+
+      if (db) {
+        try {
+          await setDoc(doc(db, "requests", requestId), {
+            id: requestId,
+            userId,
+            phone: maskedPhone,
+            countryCode,
+            status: "REFUNDED",
+            amountCharged: 0.0,
+            isRefunded: true,
+            result: { "Status": "Provider request failed", ...telecomData },
+            rawResponse: executionResult?.rawResponse || null,
+            createdAt: new Date().toISOString(),
+          });
+        } catch (e) {}
       }
 
-      const combinedResult = {
-        "Full Name": sampleSubscriber.name,
-        "Father's Name": sampleSubscriber.fname,
-        "Mobile Number": sampleSubscriber.mobile,
-        "Registered Address": sampleSubscriber.address,
-        "Identity Number": sampleSubscriber.id,
-        ...telecomData,
-      };
-
-      const rawResp = {
-        found: 1,
-        data: [
-          {
-            mobile: sampleSubscriber.mobile,
-            name: sampleSubscriber.name,
-            fname: sampleSubscriber.fname,
-            address: sampleSubscriber.address,
-            email: sampleSubscriber.email,
-            id: sampleSubscriber.id,
-          },
-        ],
-        telecom: telecomData,
-      };
-
-      executionResult = {
-        success: true,
-        httpStatus: 200,
-        latencyMs: 110,
-        rawResponse: rawResp,
-        sanitizedResult: combinedResult,
-        message: "Phone number resolved successfully.",
-        apiName: apiConfig?.name || "UnMaskPeople Intelligence Core",
-        cost: requestCost,
+      return {
+        requestId,
+        status: "REFUNDED",
+        success: false,
+        phone: maskedPhone,
+        latencyMs: executionResult?.latencyMs || 0,
+        amountCharged: 0.0,
+        isRefunded: true,
+        message: executionResult?.message || `Lookup failed. ₹${requestCost.toFixed(2)} refunded to wallet.`,
+        data: {
+          "Notice": "Unable to resolve subscriber intelligence from provider. Fee refunded.",
+          ...telecomData,
+        },
+        raw: executionResult?.rawResponse || null,
+        apiUsed: executionResult?.apiName || apiConfig?.name,
+        walletBalance: updatedWallet.balance,
       };
     }
 
