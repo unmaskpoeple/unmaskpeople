@@ -74,7 +74,7 @@ export function SiteFooter() {
           <div className="flex items-center gap-4">
             <span className="flex items-center gap-1">
               <Lock className="w-3 h-3 text-emerald-400" />
-              <span>Razorpay 256-Bit Encrypted Payments</span>
+              <span>Instant UPI & 256-Bit Encrypted Transfers</span>
             </span>
           </div>
         </div>

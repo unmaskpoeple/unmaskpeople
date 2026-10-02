@@ -21,8 +21,7 @@ import { useAuth } from "@/components/providers/auth-provider";
 import { useToast } from "@/components/ui/toast";
 import { SiteFooter } from "@/components/site-footer";
 import { BrandLogo } from "@/components/brand-logo";
-
-const PRESET_AMOUNTS = [100, 250, 500, 1000];
+import { AddMoneyModal } from "@/components/add-money-modal";
 
 export default function ServicesHubPage() {
   const { user, logout, updateBalanceLocally } = useAuth();
@@ -43,15 +42,9 @@ export default function ServicesHubPage() {
 
   // Add Money Modal State
   const [showAddMoneyModal, setShowAddMoneyModal] = useState(false);
-  const [selectedAmount, setSelectedAmount] = useState(250);
-  const [customAmount, setCustomAmount] = useState("");
-  const [isCustom, setIsCustom] = useState(false);
-  const [recharging, setRecharging] = useState(false);
 
   // Guest Prompt Modal
   const [showLoginPrompt, setShowLoginPrompt] = useState(false);
-
-  const effectiveAmount = isCustom ? Number(customAmount) : selectedAmount;
 
   const handleAddMoneyClick = () => {
     if (!user) {
@@ -59,119 +52,6 @@ export default function ServicesHubPage() {
       return;
     }
     setShowAddMoneyModal(true);
-  };
-
-  const loadRazorpayScript = () => {
-    return new Promise((resolve) => {
-      if (typeof window === "undefined") return resolve(false);
-      if ((window as any).Razorpay) return resolve(true);
-      const script = document.createElement("script");
-      script.src = "https://checkout.razorpay.com/v1/checkout.js";
-      script.onload = () => resolve(true);
-      script.onerror = () => resolve(false);
-      document.body.appendChild(script);
-    });
-  };
-
-  const handleProcessRecharge = async () => {
-    if (!effectiveAmount || effectiveAmount < 10) {
-      toast.error("Invalid Amount", "Minimum recharge amount is ₹10.00");
-      return;
-    }
-
-    setRecharging(true);
-    try {
-      // 1. Create order via Razorpay endpoint
-      const resOrder = await fetch("/api/wallet/razorpay/create-order", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ amount: effectiveAmount }),
-      });
-      const orderData = await resOrder.json();
-      if (!resOrder.ok) throw new Error(orderData.error || "Failed to initialize recharge order");
-
-      if (orderData.isSimulator) {
-        // Simulated sandbox mode
-        const resVerify = await fetch("/api/wallet/razorpay/verify", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({
-            amount: effectiveAmount,
-            isSimulator: true,
-            razorpay_order_id: orderData.orderId,
-            razorpay_payment_id: `pay_sim_${Date.now()}`,
-          }),
-        });
-        const verifyData = await resVerify.json();
-        if (!resVerify.ok) throw new Error(verifyData.error || "Verification failed");
-
-        if (typeof verifyData.walletBalance === "number") {
-          updateBalanceLocally(verifyData.walletBalance);
-        } else {
-          updateBalanceLocally((user?.walletBalance || 0) + effectiveAmount);
-        }
-
-        toast.success("Wallet Recharged", `₹${effectiveAmount.toFixed(2)} credited successfully!`);
-        setShowAddMoneyModal(false);
-        setCustomAmount("");
-        setIsCustom(false);
-      } else {
-        // Live / Test Razorpay Checkout Modal
-        await loadRazorpayScript();
-        const options = {
-          key: orderData.keyId,
-          amount: Math.round(effectiveAmount * 100),
-          currency: "INR",
-          name: "UnMaskPeople.in",
-          description: `Prepaid Wallet Top-up (₹${effectiveAmount})`,
-          order_id: orderData.orderId,
-          prefill: {
-            name: user?.name,
-            email: user?.email,
-          },
-          theme: {
-            color: "#06b6d4",
-          },
-          handler: async function (response: any) {
-            try {
-              const resVerify = await fetch("/api/wallet/razorpay/verify", {
-                method: "POST",
-                headers: { "Content-Type": "application/json" },
-                body: JSON.stringify({
-                  amount: effectiveAmount,
-                  isSimulator: false,
-                  razorpay_order_id: response.razorpay_order_id,
-                  razorpay_payment_id: response.razorpay_payment_id,
-                  razorpay_signature: response.razorpay_signature,
-                }),
-              });
-              const verifyData = await resVerify.json();
-              if (!resVerify.ok) throw new Error(verifyData.error || "Verification failed");
-
-              if (typeof verifyData.walletBalance === "number") {
-                updateBalanceLocally(verifyData.walletBalance);
-              } else {
-                updateBalanceLocally((user?.walletBalance || 0) + effectiveAmount);
-              }
-
-              toast.success("Payment Received", `₹${effectiveAmount.toFixed(2)} credited via Razorpay!`);
-              setShowAddMoneyModal(false);
-              setCustomAmount("");
-              setIsCustom(false);
-            } catch (vErr: any) {
-              toast.error("Verification Error", vErr.message);
-            }
-          },
-        };
-
-        const rzp = new (window as any).Razorpay(options);
-        rzp.open();
-      }
-    } catch (err: any) {
-      toast.error("Payment Error", err.message);
-    } finally {
-      setRecharging(false);
-    }
   };
 
   const SERVICES = [
@@ -317,92 +197,14 @@ export default function ServicesHubPage() {
 
       </main>
 
-      {/* Add Money Modal (with Live / Simulator Razorpay Integration) */}
-      {showAddMoneyModal && (
-        <div className="fixed inset-0 z-50 flex items-center justify-center p-4 bg-slate-950/80 backdrop-blur-md animate-in fade-in duration-200">
-          <div className="w-full max-w-md bg-slate-900/95 border border-slate-800 rounded-3xl p-6 shadow-2xl space-y-6 backdrop-blur-2xl relative">
-            <div className="absolute top-0 left-8 right-8 h-[2px] bg-gradient-to-r from-transparent via-cyan-500 to-transparent" />
-            <div className="flex items-center justify-between pb-3 border-b border-slate-800">
-              <div className="flex items-center gap-2.5">
-                <div className="w-9 h-9 rounded-xl bg-emerald-950/80 border border-emerald-800/60 text-emerald-400 flex items-center justify-center">
-                  <CreditCard className="w-4 h-4" />
-                </div>
-                <div>
-                  <h3 className="font-black text-lg gradient-letter-cyan">Add Money</h3>
-                  <p className="text-xs text-slate-400 font-mono">Current Balance: <span className="text-emerald-400 font-bold">₹{(user?.walletBalance ?? 0).toFixed(2)}</span></p>
-                </div>
-              </div>
-              <button type="button" onClick={() => setShowAddMoneyModal(false)} className="p-1 rounded-full text-slate-400 hover:text-slate-200">
-                <X className="w-5 h-5" />
-              </button>
-            </div>
-
-            <div className="space-y-3">
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">Select Recharge Amount</label>
-              <div className="grid grid-cols-4 gap-2">
-                {PRESET_AMOUNTS.map((amt) => {
-                  const isSelected = !isCustom && selectedAmount === amt;
-                  return (
-                    <button
-                      key={amt}
-                      type="button"
-                      onClick={() => { setSelectedAmount(amt); setIsCustom(false); }}
-                      className={`py-3 rounded-xl font-bold text-xs border transition-all ${
-                        isSelected
-                          ? "bg-gradient-to-r from-cyan-500 to-indigo-600 text-white border-transparent shadow-lg shadow-indigo-500/25"
-                          : "border-slate-800 bg-slate-950/60 text-slate-300 hover:border-slate-700 hover:text-white"
-                      }`}
-                    >
-                      ₹{amt}
-                    </button>
-                  );
-                })}
-              </div>
-            </div>
-
-            <div className="space-y-1.5">
-              <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider">Or Custom Amount (₹)</label>
-              <div className="relative">
-                <span className="absolute left-3.5 top-1/2 -translate-y-1/2 text-slate-400 font-bold text-sm">₹</span>
-                <input
-                  type="number"
-                  min="10"
-                  max="100000"
-                  value={customAmount}
-                  onChange={(e) => { setCustomAmount(e.target.value); setIsCustom(true); }}
-                  placeholder="Enter custom amount (min ₹10)"
-                  className="w-full pl-8 pr-4 py-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white text-sm focus:border-cyan-400 outline-none font-mono"
-                />
-              </div>
-            </div>
-
-            {/* Payment methods support banner */}
-            <div className="p-3 rounded-xl bg-slate-950 border border-slate-800 text-[11px] text-slate-400 flex items-center justify-between">
-              <span>Supports UPI (GPay/PhonePe), Cards, NetBanking</span>
-              <span className="font-bold text-cyan-400 font-mono">Razorpay</span>
-            </div>
-
-            <button
-              type="button"
-              disabled={recharging || !effectiveAmount || effectiveAmount < 10}
-              onClick={handleProcessRecharge}
-              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-extrabold text-sm shadow-lg shadow-emerald-500/20 disabled:opacity-50 transition-all flex items-center justify-center gap-2"
-            >
-              {recharging ? (
-                <>
-                  <Loader2 className="w-4 h-4 animate-spin text-white" />
-                  <span>Connecting to Gateway...</span>
-                </>
-              ) : (
-                <>
-                  <Zap className="w-4 h-4 text-white" />
-                  <span>Pay & Top-Up ₹{effectiveAmount || 0}</span>
-                </>
-              )}
-            </button>
-          </div>
-        </div>
-      )}
+      {/* Add Money Modal (Manual UPI QR & UTR) */}
+      <AddMoneyModal
+        isOpen={showAddMoneyModal}
+        onClose={() => setShowAddMoneyModal(false)}
+        onBalanceUpdated={updateBalanceLocally}
+        userEmail={user?.email}
+        userName={user?.name}
+      />
 
       {/* Guest Login Prompt Modal */}
       {showLoginPrompt && (

@@ -17,7 +17,7 @@ import {
   Menu,
   X,
   Share2,
-  CreditCard,
+  QrCode,
   Mail,
 } from "lucide-react";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -26,7 +26,7 @@ import { BrandLogo } from "@/components/brand-logo";
 const ADMIN_NAV = [
   { name: "Overview & Analytics", href: "/admin", icon: LayoutDashboard },
   { name: "Referral Program", href: "/admin/referrals", icon: Share2 },
-  { name: "Razorpay Gateway", href: "/admin/gateway", icon: CreditCard },
+  { name: "UPI Gateway & Deposits", href: "/admin/gateway", icon: QrCode },
   { name: "Email & SMTP", href: "/admin/email", icon: Mail },
   { name: "User Management", href: "/admin/users", icon: Users },
   { name: "API Configuration", href: "/admin/apis", icon: Cpu },

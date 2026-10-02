@@ -21,11 +21,14 @@ export interface SystemSettingsMap {
   referral_bonus: number; // default: 9.0 (₹9 per successful referral)
   referral_required_searches: number; // default: 2 (2 successful searches required)
 
-  // Razorpay Gateway
-  razorpay_enabled: boolean;
-  razorpay_key_id: string;
-  razorpay_key_secret: string;
-  razorpay_webhook_secret: string;
+  // Manual UPI Gateway
+  upi_enabled: boolean;
+  upi_id: string;
+  upi_payee_name: string;
+  upi_qr_image_url: string;
+  upi_auto_approve: boolean;
+  upi_min_deposit: number;
+  upi_instructions: string;
 
   // Email / SMTP Settings
   smtp_enabled: boolean;
@@ -61,10 +64,14 @@ const DEFAULT_SETTINGS: SystemSettingsMap = {
   referral_bonus: 0.0,
   referral_required_searches: 2,
 
-  razorpay_enabled: false,
-  razorpay_key_id: process.env.RAZORPAY_KEY_ID || "",
-  razorpay_key_secret: process.env.RAZORPAY_KEY_SECRET || "",
-  razorpay_webhook_secret: process.env.RAZORPAY_WEBHOOK_SECRET || "",
+  // Manual UPI Defaults
+  upi_enabled: true,
+  upi_id: process.env.NEXT_PUBLIC_UPI_ID || "unmaskpeople@upi",
+  upi_payee_name: "UnMaskPeople",
+  upi_qr_image_url: "",
+  upi_auto_approve: false,
+  upi_min_deposit: 10,
+  upi_instructions: "Scan the UPI QR code using any UPI app (GPay, PhonePe, Paytm, BHIM) and enter the 12-digit UTR/Reference number below.",
 
   // Email & Activation Defaults
   smtp_enabled: process.env.SMTP_ENABLED === "true",

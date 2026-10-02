@@ -10,6 +10,12 @@ export async function GET() {
       {
         phoneCost: Number(settings.default_cost_per_request ?? 3.5),
         minWalletBalance: Number(settings.min_wallet_balance ?? 0.0),
+        upiEnabled: settings.upi_enabled !== false,
+        upiId: settings.upi_id || "unmaskpeople@upi",
+        upiPayeeName: settings.upi_payee_name || "UnMaskPeople",
+        upiQrImageUrl: settings.upi_qr_image_url || "",
+        upiMinDeposit: Number(settings.upi_min_deposit ?? 10),
+        upiInstructions: settings.upi_instructions || "",
       },
       {
         headers: {
@@ -21,6 +27,12 @@ export async function GET() {
     return NextResponse.json({
       phoneCost: 3.5,
       minWalletBalance: 0.0,
+      upiEnabled: true,
+      upiId: "unmaskpeople@upi",
+      upiPayeeName: "UnMaskPeople",
+      upiQrImageUrl: "",
+      upiMinDeposit: 10,
+      upiInstructions: "",
     });
   }
 }

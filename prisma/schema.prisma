@@ -134,7 +134,7 @@ model Payment {
   id               String   @id @default(cuid())
   userId           String
   user             User     @relation(fields: [userId], references: [id], onDelete: Cascade)
-  gateway          String   @default("GATEWAY_SIMULATOR") // "RAZORPAY" | "STRIPE" | "GATEWAY_SIMULATOR"
+  gateway          String   @default("MANUAL_UPI") // "MANUAL_UPI" | "GATEWAY_SIMULATOR"
   gatewayReference String   @unique
   amount           Float
   currency         String   @default("INR")
