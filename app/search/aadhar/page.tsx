@@ -129,36 +129,39 @@ export default function AadharSearchPage() {
         <div className="max-w-6xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between gap-4">
           <BrandLogo href="/" size="md" />
 
-          <div className="flex items-center gap-2 sm:gap-3">
+          <div className="flex items-center gap-1.5 sm:gap-3">
             {/* Refer & Earn button */}
             <button
               type="button"
               onClick={() => setShowReferralModal(true)}
-              className="px-3 sm:px-4 py-2 rounded-xl bg-violet-950/70 border border-violet-800/60 hover:border-violet-500/80 text-violet-300 hover:text-white font-extrabold text-xs transition-all flex items-center gap-1.5 shadow-sm hover:scale-105 active:scale-95"
+              className="px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-violet-950/70 border border-violet-800/60 hover:border-violet-500/80 text-violet-300 hover:text-white font-extrabold text-xs transition-all flex items-center gap-1 sm:gap-1.5 shadow-sm hover:scale-105 active:scale-95 shrink-0"
             >
               <Gift className="w-3.5 h-3.5 text-violet-400" />
-              <span>Refer & Earn ₹9</span>
+              <span className="hidden sm:inline">Refer & Earn ₹9</span>
+              <span className="sm:hidden">Earn ₹9</span>
             </button>
+
             {user ? (
-              <div className="flex items-center gap-2 bg-slate-900/80 border border-slate-800/90 rounded-2xl p-1.5 shadow-inner">
-                <div className="px-3 py-1 text-xs font-mono font-bold text-slate-300 hidden sm:flex items-center gap-1.5">
-                  <Wallet className="w-3.5 h-3.5 text-violet-400" />
+              <div className="flex items-center gap-1.5 sm:gap-2 bg-slate-900/90 border border-slate-800/90 rounded-2xl p-1 sm:p-1.5 shadow-inner">
+                <div className="px-2 sm:px-3 py-1 text-xs font-mono font-bold text-slate-300 flex items-center gap-1">
+                  <Wallet className="w-3.5 h-3.5 text-violet-400 shrink-0" />
                   <span className="text-emerald-400">₹{user.walletBalance.toFixed(2)}</span>
                 </div>
                 <button
                   type="button"
                   onClick={handleAddMoneyClick}
-                  className="px-4 py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-extrabold text-xs shadow-md shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5"
+                  className="px-2.5 sm:px-4 py-1.5 sm:py-2 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-extrabold text-xs shadow-md shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-1"
                 >
                   <Plus className="w-3.5 h-3.5" />
-                  <span>Add Money</span>
+                  <span className="hidden sm:inline">Add Money</span>
+                  <span className="sm:hidden">Add</span>
                 </button>
               </div>
             ) : (
               <button
                 type="button"
                 onClick={handleAddMoneyClick}
-                className="px-4 py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-extrabold text-xs shadow-md shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5"
+                className="px-3 sm:px-4 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-extrabold text-xs shadow-md shadow-emerald-500/20 hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5"
               >
                 <Plus className="w-3.5 h-3.5" />
                 <span>Add Money</span>
@@ -169,16 +172,16 @@ export default function AadharSearchPage() {
               <button
                 type="button"
                 onClick={logout}
-                className="px-4 py-2.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-rose-500/40 text-slate-300 hover:text-rose-400 font-bold text-xs transition-all flex items-center gap-1.5 hover:bg-rose-950/20"
+                className="p-2 sm:px-4 sm:py-2.5 rounded-xl bg-slate-900 border border-slate-800 hover:border-rose-500/40 text-slate-300 hover:text-rose-400 font-bold text-xs transition-all flex items-center gap-1.5 hover:bg-rose-950/20 shrink-0"
                 title="Log Out"
               >
                 <LogOut className="w-3.5 h-3.5 text-rose-400" />
-                <span>Log Out</span>
+                <span className="hidden sm:inline">Log Out</span>
               </button>
             ) : (
               <Link
                 href="/login"
-                className="px-5 py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 via-indigo-500 to-fuchsia-500 hover:opacity-95 text-white font-extrabold text-xs shadow-lg shadow-indigo-500/25 hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5"
+                className="px-3.5 sm:px-5 py-2 sm:py-2.5 rounded-xl bg-gradient-to-r from-cyan-500 via-indigo-500 to-fuchsia-500 hover:opacity-95 text-white font-extrabold text-xs shadow-lg shadow-indigo-500/25 hover:scale-105 active:scale-95 transition-all flex items-center gap-1.5 shrink-0"
               >
                 <span>Log In</span>
                 <ArrowRight className="w-3.5 h-3.5" />

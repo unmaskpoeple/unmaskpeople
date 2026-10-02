@@ -1,7 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/jwt";
 import { db } from "@/lib/firebase";
-import { doc, getDoc, updateDoc } from "firebase/firestore";
+import { doc, getDoc, setDoc, getDocs, collection, query, where } from "firebase/firestore";
 import { WalletService } from "@/services/wallet.service";
 import prisma from "@/lib/prisma";
 
@@ -21,6 +21,7 @@ export async function POST(
 
     let deposit: any = null;
 
+    // 1. Fetch deposit record from Firestore
     if (db) {
       try {
         const dSnap = await getDoc(doc(db, "upi_deposits", depositId));
@@ -32,6 +33,7 @@ export async function POST(
       }
     }
 
+    // 2. Fallback to Prisma Payment table
     if (!deposit) {
       try {
         const p = await prisma.payment.findUnique({
@@ -42,9 +44,11 @@ export async function POST(
           deposit = {
             id: p.id,
             userId: p.userId,
+            userEmail: p.user?.email || "",
+            userName: p.user?.name || "Subscriber",
             amount: p.amount,
             utr: p.gatewayReference,
-            status: p.status,
+            status: p.status === "SUCCESSFUL" ? "APPROVED" : p.status,
           };
         }
       } catch {}
@@ -59,46 +63,79 @@ export async function POST(
     }
 
     const nowIso = new Date().toISOString();
+    const amount = Number(deposit.amount);
 
     if (action === "APPROVE") {
-      // 1. Credit the user's wallet
-      const depositResult = await WalletService.depositFunds({
-        userId: deposit.userId,
-        amount: Number(deposit.amount),
-        referenceId: deposit.utr || depositId,
-        description: `Approved manual UPI deposit (UTR: ${deposit.utr})`,
-        gateway: "MANUAL_UPI",
-      });
+      // ─────────────────────────────────────────────
+      // APPROVE: Credit user wallet in Firestore & Prisma
+      // ─────────────────────────────────────────────
+      let targetUserId = deposit.userId;
 
-      // Update Firestore user document wallet balance
+      // 1. Update Cloud Firestore User Wallet Balance
       if (db) {
         try {
-          const userRef = doc(db, "users", deposit.userId);
-          const uSnap = await getDoc(userRef);
-          if (uSnap.exists()) {
+          let userDocRef: any = null;
+          let uSnap: any = null;
+
+          if (targetUserId && !targetUserId.startsWith("anon_")) {
+            userDocRef = doc(db, "users", targetUserId);
+            uSnap = await getDoc(userDocRef);
+          }
+
+          // If not found by userId, resolve by userEmail
+          if ((!uSnap || !uSnap.exists()) && deposit.userEmail) {
+            const cleanEmail = String(deposit.userEmail).toLowerCase().trim();
+            const uQuery = query(collection(db, "users"), where("email", "==", cleanEmail));
+            const qSnap = await getDocs(uQuery);
+            if (!qSnap.empty) {
+              userDocRef = qSnap.docs[0].ref;
+              uSnap = qSnap.docs[0];
+              targetUserId = qSnap.docs[0].id;
+            }
+          }
+
+          if (uSnap && uSnap.exists() && userDocRef) {
             const currentBal = Number((uSnap.data().walletBalance ?? 0.0).toFixed(2));
-            await updateDoc(userRef, {
-              walletBalance: Number((currentBal + Number(deposit.amount)).toFixed(2)),
-            });
+            const newBal = Number((currentBal + amount).toFixed(2));
+            await setDoc(userDocRef, { walletBalance: newBal }, { merge: true });
           }
         } catch (e) {
           console.warn("Firestore user balance update warning:", e);
         }
       }
 
-      // 2. Mark deposit as APPROVED in Firestore
+      // 2. Best-effort Prisma Wallet Credit
+      if (targetUserId && !targetUserId.startsWith("anon_")) {
+        try {
+          await WalletService.depositFunds({
+            userId: targetUserId,
+            amount,
+            referenceId: deposit.utr || depositId,
+            description: `Approved manual UPI deposit (UTR: ${deposit.utr})`,
+            gateway: "MANUAL_UPI",
+          });
+        } catch (e) {
+          console.warn("Prisma depositFunds fallback warning:", e);
+        }
+      }
+
+      // 3. Mark deposit document as APPROVED in Firestore
       if (db) {
         try {
-          await updateDoc(doc(db, "upi_deposits", depositId), {
-            status: "APPROVED",
-            approvedAt: nowIso,
-            approvedBy: admin.email || admin.id,
-            updatedAt: nowIso,
-          });
+          await setDoc(
+            doc(db, "upi_deposits", depositId),
+            {
+              status: "APPROVED",
+              approvedAt: nowIso,
+              approvedBy: admin.email || admin.id,
+              updatedAt: nowIso,
+            },
+            { merge: true }
+          );
         } catch {}
       }
 
-      // 3. Update Prisma Payment record if present
+      // 4. Update Prisma Payment record if present
       try {
         await prisma.payment.update({
           where: { id: depositId },
@@ -109,21 +146,27 @@ export async function POST(
       return NextResponse.json({
         success: true,
         status: "APPROVED",
-        message: `Deposit of ₹${Number(deposit.amount).toFixed(2)} approved! Funds credited to user wallet.`,
+        message: `Deposit of ₹${amount.toFixed(2)} approved! ₹${amount.toFixed(2)} credited to ${deposit.userEmail || deposit.userId}.`,
       });
     } else {
-      // REJECT action
+      // ─────────────────────────────────────────────
+      // REJECT: Mark deposit as REJECTED
+      // ─────────────────────────────────────────────
       const reason = body.reason || "Invalid or unverified UPI reference number.";
 
       if (db) {
         try {
-          await updateDoc(doc(db, "upi_deposits", depositId), {
-            status: "REJECTED",
-            rejectedAt: nowIso,
-            rejectedBy: admin.email || admin.id,
-            rejectionReason: reason,
-            updatedAt: nowIso,
-          });
+          await setDoc(
+            doc(db, "upi_deposits", depositId),
+            {
+              status: "REJECTED",
+              rejectedAt: nowIso,
+              rejectedBy: admin.email || admin.id,
+              rejectionReason: reason,
+              updatedAt: nowIso,
+            },
+            { merge: true }
+          );
         } catch {}
       }
 

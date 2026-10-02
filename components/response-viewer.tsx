@@ -91,20 +91,20 @@ export function ResponseViewer({
   return (
     <div className="rounded-2xl border border-slate-200 dark:border-slate-800 bg-white dark:bg-slate-900/90 shadow-xl overflow-hidden backdrop-blur-xl transition-all">
       {/* Top Header Card */}
-      <div className="p-5 border-b border-slate-200 dark:border-slate-800/80 bg-slate-50/70 dark:bg-slate-950/60 flex flex-wrap items-center justify-between gap-4">
-        <div className="flex items-center gap-3">
+      <div className="p-3.5 sm:p-5 border-b border-slate-200 dark:border-slate-800/80 bg-slate-50/70 dark:bg-slate-950/60 flex flex-wrap items-center justify-between gap-3 sm:gap-4">
+        <div className="flex items-center gap-2.5 sm:gap-3">
           <div
-            className={`w-3.5 h-3.5 rounded-full ${
+            className={`w-3.5 h-3.5 rounded-full shrink-0 ${
               isSuccess ? "bg-emerald-500 shadow-glow animate-pulse" : isFailed ? "bg-rose-500" : "bg-amber-500"
             }`}
           />
-          <div>
-            <div className="flex items-center gap-2">
-              <span className="font-semibold text-slate-900 dark:text-slate-100 text-base">
+          <div className="min-w-0">
+            <div className="flex flex-wrap items-center gap-1.5 sm:gap-2">
+              <span className="font-semibold text-slate-900 dark:text-slate-100 text-sm sm:text-base">
                 Status: {status}
               </span>
               <span
-                className={`text-xs px-2.5 py-0.5 rounded-full font-medium ${
+                className={`text-[10px] sm:text-xs px-2 sm:px-2.5 py-0.5 rounded-full font-medium ${
                   isSuccess
                     ? "bg-emerald-500/10 text-emerald-600 dark:text-emerald-400 border border-emerald-500/20"
                     : isFailed
@@ -112,37 +112,37 @@ export function ResponseViewer({
                     : "bg-amber-500/10 text-amber-600 dark:text-amber-400 border border-amber-500/20"
                 }`}
               >
-                {isRefunded ? "REFUNDED TO WALLET" : isSuccess ? "RESOLVED" : "LOOKUP FAILED"}
+                {isRefunded ? "REFUNDED" : isSuccess ? "RESOLVED" : "LOOKUP FAILED"}
               </span>
             </div>
-            <p className="text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5">
+            <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5 truncate">
               Target: <span className="text-slate-800 dark:text-slate-200 font-semibold">{phone}</span>
-              {apiUsed && <span className="ml-2 text-slate-400">• API: {apiUsed}</span>}
+              {apiUsed && <span className="ml-2 text-slate-400">• {apiUsed}</span>}
             </p>
           </div>
         </div>
 
         {/* Quick telemetry badges */}
-        <div className="flex items-center gap-3">
+        <div className="flex flex-wrap items-center gap-2 sm:gap-3">
           {latencyMs !== undefined && (
-            <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/60 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700/50">
+            <div className="flex items-center gap-1 text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/60 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg border border-slate-200 dark:border-slate-700/50">
               <Clock className="w-3.5 h-3.5 text-indigo-400" />
               <span>{latencyMs}ms</span>
             </div>
           )}
 
           {amountCharged !== undefined && (
-            <div className="flex items-center gap-1.5 text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/60 px-2.5 py-1.5 rounded-lg border border-slate-200 dark:border-slate-700/50">
+            <div className="flex items-center gap-1 text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 bg-slate-100 dark:bg-slate-800/60 px-2 py-1 sm:px-2.5 sm:py-1.5 rounded-lg border border-slate-200 dark:border-slate-700/50">
               <Zap className="w-3.5 h-3.5 text-amber-400" />
               <span>
-                {isRefunded ? "₹0.00 (Refunded)" : `₹${amountCharged.toFixed(2)}`}
+                {isRefunded ? "₹0.00" : `₹${amountCharged.toFixed(2)}`}
               </span>
             </div>
           )}
 
           <button
             onClick={handleCopy}
-            className="flex items-center gap-1.5 text-xs font-medium px-3 py-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 border border-indigo-200 dark:border-indigo-800/50 transition-colors"
+            className="flex items-center gap-1 text-[11px] sm:text-xs font-medium px-2.5 py-1 sm:px-3 sm:py-1.5 rounded-lg bg-indigo-50 dark:bg-indigo-950/60 text-indigo-600 dark:text-indigo-400 hover:bg-indigo-100 dark:hover:bg-indigo-900/60 border border-indigo-200 dark:border-indigo-800/50 transition-colors"
           >
             {copied ? <Check className="w-3.5 h-3.5 text-emerald-400" /> : <Copy className="w-3.5 h-3.5" />}
             <span>{copied ? "Copied" : "Copy JSON"}</span>
@@ -153,7 +153,7 @@ export function ResponseViewer({
       {/* Message alert if present */}
       {message && (
         <div
-          className={`px-5 py-2.5 text-xs border-b ${
+          className={`px-3.5 sm:px-5 py-2 sm:py-2.5 text-xs border-b ${
             isSuccess
               ? "bg-emerald-500/5 border-emerald-500/15 text-emerald-700 dark:text-emerald-300"
               : "bg-rose-500/5 border-rose-500/15 text-rose-700 dark:text-rose-300"
@@ -165,10 +165,10 @@ export function ResponseViewer({
       )}
 
       {/* Tabs */}
-      <div className="flex items-center border-b border-slate-200 dark:border-slate-800 px-5 bg-slate-100/50 dark:bg-slate-900/50">
+      <div className="flex items-center border-b border-slate-200 dark:border-slate-800 px-3 sm:px-5 bg-slate-100/50 dark:bg-slate-900/50 overflow-x-auto scrollbar-none whitespace-nowrap">
         <button
           onClick={() => setActiveTab("summary")}
-          className={`flex items-center gap-2 py-3 px-3 text-xs font-medium border-b-2 transition-colors ${
+          className={`flex items-center gap-1.5 sm:gap-2 py-2.5 sm:py-3 px-3 text-xs font-medium border-b-2 transition-colors whitespace-nowrap ${
             activeTab === "summary"
               ? "border-indigo-500 text-indigo-600 dark:text-indigo-400"
               : "border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
@@ -179,19 +179,19 @@ export function ResponseViewer({
         </button>
         <button
           onClick={() => setActiveTab("json")}
-          className={`flex items-center gap-2 py-3 px-3 text-xs font-medium border-b-2 transition-colors ${
+          className={`flex items-center gap-1.5 sm:gap-2 py-2.5 sm:py-3 px-3 text-xs font-medium border-b-2 transition-colors whitespace-nowrap ${
             activeTab === "json"
               ? "border-indigo-500 text-indigo-600 dark:text-indigo-400"
               : "border-transparent text-slate-500 hover:text-slate-800 dark:hover:text-slate-200"
           }`}
         >
           <Terminal className="w-3.5 h-3.5" />
-          <span>Complete Raw JSON Response</span>
+          <span>Complete Raw JSON</span>
         </button>
       </div>
 
       {/* Content Area */}
-      <div className="p-5">
+      <div className="p-3.5 sm:p-5 overflow-x-auto">
         {activeTab === "summary" ? (
           <div>
             {(() => {
