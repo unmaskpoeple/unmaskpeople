@@ -29,6 +29,7 @@ model User {
   adminAuditLogs        AuditLog[]          @relation("AdminAudits")
   referralsGiven        Referral[]          @relation("Referrer")
   referralReceived      Referral?           @relation("ReferredUser")
+  otpOrders             OtpOrder[]
 
   @@index([email])
   @@index([role])
@@ -187,5 +188,35 @@ model Referral {
 
   @@index([referrerId])
   @@index([status])
+}
+
+model OtpOrder {
+  id            String    @id @default(cuid())
+  userId        String
+  user          User      @relation(fields: [userId], references: [id], onDelete: Cascade)
+  fiveSimId     Int       // 5SIM order ID
+  phone         String    // e.g. +12025550199
+  service       String    // e.g. "telegram"
+  serviceName   String    // e.g. "Telegram"
+  country       String    // e.g. "usa"
+  countryName   String    // e.g. "USA"
+  operator      String    @default("any") // e.g. "virtual51"
+  cost          Float     // Charged to user
+  costFiveSim   Float     @default(0.0) // 5SIM wholesale cost
+  currency      String    @default("USD")
+  status        String    @default("PENDING") // PENDING | RECEIVED | FINISHED | CANCELED | TIMEOUT | BANNED
+  smsCode       String?   // Extracted OTP
+  smsText       String?   // Full text message
+  smsSender     String?   // Sender
+  smsReceivedAt DateTime?
+  expiresAt     DateTime
+  isRefunded    Boolean   @default(false)
+  createdAt     DateTime  @default(now())
+  updatedAt     DateTime  @updatedAt
+
+  @@index([userId])
+  @@index([fiveSimId])
+  @@index([status])
+  @@index([createdAt])
 }
 

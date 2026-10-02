@@ -12,12 +12,8 @@ export const viewport: Viewport = {
 };
 
 export const metadata: Metadata = {
-  title: "UnMaskPeople.in - Telecom & Public Records Intelligence",
-  description: "Real-time carrier identification, vehicle RC lookup, and identity status verification platform with an admin-configurable API engine and secure wallet system.",
-  icons: {
-    icon: "/unmask-logo.jpg",
-    apple: "/unmask-logo.jpg",
-  },
+  title: "NumVerge OTP - Instant Virtual Phone Numbers & SMS Verification",
+  description: "Receive OTP and SMS verification online with real virtual numbers across 150+ countries and 1,320+ services. Instant delivery with 100% automated refund guarantee.",
 };
 
 export default function RootLayout({

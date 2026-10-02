@@ -13,28 +13,32 @@ export interface ToastItem {
   duration?: number;
 }
 
+export type ToastCallable = {
+  (options: { title: string; description?: string; variant?: ToastType | "destructive" | "default" }): void;
+  success: (title: string, message?: string) => void;
+  error: (title: string, message?: string) => void;
+  info: (title: string, message?: string) => void;
+  warning: (title: string, message?: string) => void;
+};
+
+const defaultToastFn: any = () => {};
+defaultToastFn.success = () => {};
+defaultToastFn.error = () => {};
+defaultToastFn.info = () => {};
+defaultToastFn.warning = () => {};
+
 interface ToastContextType {
   toasts: ToastItem[];
   addToast: (toast: Omit<ToastItem, "id">) => void;
   removeToast: (id: string) => void;
-  toast: {
-    success: (title: string, message?: string) => void;
-    error: (title: string, message?: string) => void;
-    info: (title: string, message?: string) => void;
-    warning: (title: string, message?: string) => void;
-  };
+  toast: ToastCallable;
 }
 
 const ToastContext = createContext<ToastContextType>({
   toasts: [],
   addToast: () => {},
   removeToast: () => {},
-  toast: {
-    success: () => {},
-    error: () => {},
-    info: () => {},
-    warning: () => {},
-  },
+  toast: defaultToastFn,
 });
 
 export function ToastProvider({ children }: { children: React.ReactNode }) {
@@ -55,12 +59,14 @@ export function ToastProvider({ children }: { children: React.ReactNode }) {
     [removeToast]
   );
 
-  const toast = {
-    success: (title: string, message?: string) => addToast({ type: "success", title, message }),
-    error: (title: string, message?: string) => addToast({ type: "error", title, message }),
-    info: (title: string, message?: string) => addToast({ type: "info", title, message }),
-    warning: (title: string, message?: string) => addToast({ type: "warning", title, message }),
+  const toast: any = (options: { title: string; description?: string; variant?: ToastType | "destructive" | "default" }) => {
+    const type: ToastType = options.variant === "destructive" ? "error" : (options.variant as ToastType) || "info";
+    addToast({ type, title: options.title, message: options.description });
   };
+  toast.success = (title: string, message?: string) => addToast({ type: "success", title, message });
+  toast.error = (title: string, message?: string) => addToast({ type: "error", title, message });
+  toast.info = (title: string, message?: string) => addToast({ type: "info", title, message });
+  toast.warning = (title: string, message?: string) => addToast({ type: "warning", title, message });
 
   return (
     <ToastContext.Provider value={{ toasts, addToast, removeToast, toast }}>

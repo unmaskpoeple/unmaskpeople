@@ -12,6 +12,7 @@ import {
   XCircle,
   RefreshCw,
   Clock,
+  Shield,
   ShieldAlert,
   Cpu,
   Layers,
@@ -176,6 +177,19 @@ export default function AdminOverviewPage() {
             <div className="truncate">
               <span className="text-xs font-bold text-slate-200 block truncate">API Providers</span>
               <span className="text-[10px] text-slate-400">Configure & test</span>
+            </div>
+          </Link>
+
+          <Link
+            href="/admin/fivesim"
+            className="p-3 rounded-2xl bg-cyan-950/40 border border-cyan-800/60 hover:border-cyan-400 hover:bg-cyan-950/70 transition-all flex items-center gap-2.5 group"
+          >
+            <div className="w-8 h-8 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center group-hover:scale-105 transition-transform">
+              <Shield className="w-4 h-4" />
+            </div>
+            <div className="truncate">
+              <span className="text-xs font-bold text-cyan-300 block truncate">5SIM Protocol</span>
+              <span className="text-[10px] text-slate-400">Balance & Pricing</span>
             </div>
           </Link>
 

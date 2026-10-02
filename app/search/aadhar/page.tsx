@@ -18,6 +18,8 @@ import {
   Lock,
   Fingerprint,
   Gift,
+  Eye,
+  EyeOff,
 } from "lucide-react";
 import { BrandLogo } from "@/components/brand-logo";
 import { useAuth } from "@/components/providers/auth-provider";
@@ -35,6 +37,7 @@ export default function AadharSearchPage() {
   const [searching, setSearching] = useState(false);
   const [searchResult, setSearchResult] = useState<any>(null);
   const [searchError, setSearchError] = useState("");
+  const [revealAadharNumber, setRevealAadharNumber] = useState(false);
 
   // Add Money Modal State
   const [showAddMoneyModal, setShowAddMoneyModal] = useState(false);
@@ -286,8 +289,22 @@ export default function AadharSearchPage() {
             <div className="flex items-center justify-between px-1">
               <div className="flex items-center gap-2">
                 <span className="font-bold text-xs uppercase tracking-wider text-fuchsia-400">UIDAI Verification Summary</span>
-                <span className="font-mono text-xs font-bold text-slate-200 bg-slate-900/90 px-2.5 py-0.5 rounded-md border border-slate-800">
-                  {searchResult.number}
+                <span className="font-mono text-xs font-bold text-slate-200 bg-slate-900/90 px-2.5 py-0.5 rounded-md border border-slate-800 inline-flex items-center gap-1.5">
+                  <span className="select-none">
+                    {revealAadharNumber ? searchResult.number : "•••• •••• ••••"}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => setRevealAadharNumber(!revealAadharNumber)}
+                    className="p-0.5 text-slate-400 hover:text-fuchsia-400 transition-colors"
+                    title={revealAadharNumber ? "Hide Aadhaar" : "Reveal Aadhaar"}
+                  >
+                    {revealAadharNumber ? (
+                      <EyeOff className="w-3 h-3 text-amber-400" />
+                    ) : (
+                      <Eye className="w-3 h-3 text-fuchsia-400" />
+                    )}
+                  </button>
                 </span>
               </div>
               <button

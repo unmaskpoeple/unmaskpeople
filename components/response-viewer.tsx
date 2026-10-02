@@ -1,7 +1,7 @@
 "use client";
 
 import React, { useState } from "react";
-import { Check, Copy, ChevronDown, ChevronRight, Terminal, Layers, ShieldCheck, Clock, Zap, User, MapPin, Phone, Hash, Mail, CheckCircle2, UserCheck, Sparkles } from "lucide-react";
+import { Check, Copy, ChevronDown, ChevronRight, Terminal, Layers, ShieldCheck, Clock, Zap, User, MapPin, Phone, Hash, Mail, CheckCircle2, UserCheck, Sparkles, Eye, EyeOff } from "lucide-react";
 import { useToast } from "./ui/toast";
 
 interface ResponseViewerProps {
@@ -30,7 +30,24 @@ export function ResponseViewer({
   const [activeTab, setActiveTab] = useState<"summary" | "json">("summary");
   const [copied, setCopied] = useState(false);
   const [collapsedNodes, setCollapsedNodes] = useState<Record<string, boolean>>({});
+  const [revealedGovIds, setRevealedGovIds] = useState<Record<string, boolean>>({});
   const { toast } = useToast();
+
+  const toggleGovId = (key: string) => {
+    setRevealedGovIds((prev) => ({ ...prev, [key]: !prev[key] }));
+  };
+
+  const maskGovId = (val: any): string => {
+    if (!val) return "•••• •••• ••••";
+    const str = String(val).trim();
+    if (str.length === 12) return "•••• •••• ••••";
+    if (str.length > 8) return "•••• •••• ••••";
+    return "••••••••";
+  };
+
+  const isGovIdField = (key: string): boolean => {
+    return /^(id|aadhar|aadhaar|gov_?id|uid|aadharNumber|aadhaarNumber)$/i.test(key);
+  };
 
   const handleCopy = () => {
     const jsonStr = JSON.stringify(raw || data, null, 2);
@@ -75,10 +92,36 @@ export function ResponseViewer({
             {keys.map((key) => {
               const currentPath = `${path}.${key}`;
               const value = obj[key];
+              const isSensitive = isGovIdField(key) && (typeof value === "string" || typeof value === "number");
+              const isRevealed = !!revealedGovIds[currentPath];
+
               return (
-                <div key={key} className="leading-relaxed">
-                  <span className="text-indigo-300 mr-1.5 font-medium">{key}:</span>
-                  {renderJsonTree(value, currentPath)}
+                <div key={key} className="leading-relaxed flex items-center gap-1.5 flex-wrap">
+                  <span className="text-indigo-300 mr-1 font-medium">{key}:</span>
+                  {isSensitive ? (
+                    <span className="inline-flex items-center gap-1.5 font-mono">
+                      <span className="text-sky-300">
+                        {isRevealed ? `"${value}"` : '"•••• •••• ••••"'}
+                      </span>
+                      <button
+                        type="button"
+                        onClick={(e) => {
+                          e.stopPropagation();
+                          toggleGovId(currentPath);
+                        }}
+                        className="p-0.5 rounded text-slate-400 hover:text-cyan-400 transition-colors"
+                        title={isRevealed ? "Hide GOV ID" : "Click to Reveal GOV ID"}
+                      >
+                        {isRevealed ? (
+                          <EyeOff className="w-3 h-3 text-amber-400" />
+                        ) : (
+                          <Eye className="w-3 h-3 text-cyan-400" />
+                        )}
+                      </button>
+                    </span>
+                  ) : (
+                    renderJsonTree(value, currentPath)
+                  )}
                 </div>
               );
             })}
@@ -115,8 +158,29 @@ export function ResponseViewer({
                 {isRefunded ? "REFUNDED" : isSuccess ? "RESOLVED" : "LOOKUP FAILED"}
               </span>
             </div>
-            <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5 truncate">
-              Target: <span className="text-slate-800 dark:text-slate-200 font-semibold">{phone}</span>
+            <p className="text-[11px] sm:text-xs text-slate-500 dark:text-slate-400 font-mono mt-0.5 truncate flex items-center gap-1.5">
+              <span>Target:</span>
+              {phone && phone.replace(/\D/g, "").length === 12 && !phone.startsWith("+") ? (
+                <span className="inline-flex items-center gap-1.5 font-mono">
+                  <span className="text-slate-800 dark:text-slate-200 font-semibold select-none">
+                    {revealedGovIds["target_phone"] ? phone : "•••• •••• ••••"}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => toggleGovId("target_phone")}
+                    className="p-0.5 text-slate-400 hover:text-cyan-400 transition-colors"
+                    title={revealedGovIds["target_phone"] ? "Hide Target" : "Reveal Target"}
+                  >
+                    {revealedGovIds["target_phone"] ? (
+                      <EyeOff className="w-3 h-3 text-amber-400" />
+                    ) : (
+                      <Eye className="w-3 h-3 text-cyan-400" />
+                    )}
+                  </button>
+                </span>
+              ) : (
+                <span className="text-slate-800 dark:text-slate-200 font-semibold">{phone}</span>
+              )}
               {apiUsed && <span className="ml-2 text-slate-400">• {apiUsed}</span>}
             </p>
           </div>
@@ -295,10 +359,24 @@ export function ResponseViewer({
                               </div>
 
                               {rec.id && (
-                                <div className="flex items-center gap-2 bg-slate-950 border border-slate-800/90 px-3.5 py-1.5 rounded-xl font-mono text-xs shadow-inner">
-                                  <Hash className="w-3.5 h-3.5 text-cyan-400" />
+                                <div className="flex items-center gap-2 bg-slate-950 border border-slate-800/90 px-3 py-1.5 rounded-xl font-mono text-xs shadow-inner">
+                                  <Hash className="w-3.5 h-3.5 text-cyan-400 shrink-0" />
                                   <span className="text-slate-400 text-[11px] font-semibold">GOV ID:</span>
-                                  <span className="text-cyan-300 font-bold tracking-wider">{String(rec.id).trim()}</span>
+                                  <span className="text-cyan-300 font-bold tracking-wider select-none font-mono">
+                                    {revealedGovIds[`rec_${idx}`] ? String(rec.id).trim() : maskGovId(rec.id)}
+                                  </span>
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleGovId(`rec_${idx}`)}
+                                    className="p-1 rounded-md text-slate-400 hover:text-cyan-300 hover:bg-slate-800/80 transition-all ml-0.5"
+                                    title={revealedGovIds[`rec_${idx}`] ? "Hide GOV ID" : "Click to Reveal GOV ID"}
+                                  >
+                                    {revealedGovIds[`rec_${idx}`] ? (
+                                      <EyeOff className="w-3.5 h-3.5 text-amber-400" />
+                                    ) : (
+                                      <Eye className="w-3.5 h-3.5 text-cyan-400" />
+                                    )}
+                                  </button>
                                 </div>
                               )}
                             </div>
@@ -312,12 +390,38 @@ export function ResponseViewer({
                                 </div>
                               </div>
 
-                              <div className="flex items-start gap-3 bg-slate-950/60 p-3 rounded-xl border border-slate-800/60">
-                                <Hash className="w-4 h-4 text-cyan-400 mt-0.5 shrink-0" />
-                                <div>
-                                  <p className="text-[11px] text-slate-500 uppercase tracking-wider font-bold">GOV ID</p>
-                                  <p className="font-mono font-bold text-cyan-300 text-sm mt-0.5">{rec.id ? String(rec.id).trim() : "N/A"}</p>
+                              <div className="flex items-start justify-between gap-3 bg-slate-950/60 p-3 rounded-xl border border-slate-800/60">
+                                <div className="flex items-start gap-3 min-w-0">
+                                  <Hash className="w-4 h-4 text-cyan-400 mt-0.5 shrink-0" />
+                                  <div className="min-w-0">
+                                    <p className="text-[11px] text-slate-500 uppercase tracking-wider font-bold">GOV ID (Aadhaar)</p>
+                                    <p className="font-mono font-bold text-cyan-300 text-sm mt-0.5 select-none truncate">
+                                      {rec.id
+                                        ? (revealedGovIds[`rec_${idx}`] ? String(rec.id).trim() : maskGovId(rec.id))
+                                        : "N/A"}
+                                    </p>
+                                  </div>
                                 </div>
+                                {rec.id && (
+                                  <button
+                                    type="button"
+                                    onClick={() => toggleGovId(`rec_${idx}`)}
+                                    className="p-1.5 rounded-lg bg-slate-900 border border-slate-800 hover:border-cyan-500/40 text-slate-300 hover:text-cyan-300 transition-all flex items-center gap-1 text-[11px] font-mono shrink-0 shadow-sm"
+                                    title={revealedGovIds[`rec_${idx}`] ? "Hide GOV ID" : "Click to Reveal GOV ID"}
+                                  >
+                                    {revealedGovIds[`rec_${idx}`] ? (
+                                      <>
+                                        <EyeOff className="w-3.5 h-3.5 text-amber-400" />
+                                        <span className="text-amber-400 font-bold hidden sm:inline">Hide</span>
+                                      </>
+                                    ) : (
+                                      <>
+                                        <Eye className="w-3.5 h-3.5 text-cyan-400" />
+                                        <span className="text-cyan-400 font-bold hidden sm:inline">Reveal</span>
+                                      </>
+                                    )}
+                                  </button>
+                                )}
                               </div>
 
                               {cleanAddr && (
@@ -330,14 +434,30 @@ export function ResponseViewer({
                                 </div>
                               )}
 
-                              {extraRecFields.map(([rk, rv]) => (
-                                <div key={rk} className="flex items-start gap-3 bg-slate-950/60 p-3 rounded-xl border border-slate-800/60">
-                                  <div>
-                                    <p className="text-[11px] text-slate-500 uppercase tracking-wider font-bold">{rk}</p>
-                                    <p className="font-mono text-slate-200 text-xs mt-0.5">{String(rv)}</p>
+                              {extraRecFields.map(([rk, rv]) => {
+                                const isSensitive = isGovIdField(rk);
+                                const isRecFieldRevealed = !!revealedGovIds[`rec_${idx}_${rk}`];
+                                return (
+                                  <div key={rk} className="flex items-start justify-between gap-3 bg-slate-950/60 p-3 rounded-xl border border-slate-800/60">
+                                    <div className="min-w-0">
+                                      <p className="text-[11px] text-slate-500 uppercase tracking-wider font-bold">{rk}</p>
+                                      <p className="font-mono text-slate-200 text-xs mt-0.5 select-none break-words">
+                                        {isSensitive && !isRecFieldRevealed ? maskGovId(rv) : String(rv)}
+                                      </p>
+                                    </div>
+                                    {isSensitive && (
+                                      <button
+                                        type="button"
+                                        onClick={() => toggleGovId(`rec_${idx}_${rk}`)}
+                                        className="p-1 rounded text-slate-400 hover:text-cyan-400 transition-colors shrink-0"
+                                        title={isRecFieldRevealed ? "Hide Value" : "Click to Reveal Value"}
+                                      >
+                                        {isRecFieldRevealed ? <EyeOff className="w-3.5 h-3.5 text-amber-400" /> : <Eye className="w-3.5 h-3.5 text-cyan-400" />}
+                                      </button>
+                                    )}
                                   </div>
-                                </div>
-                              ))}
+                                );
+                              })}
                             </div>
                           </div>
                         );
@@ -348,19 +468,47 @@ export function ResponseViewer({
                   {/* Other Response Fields */}
                   {otherEntries.length > 0 && (
                     <div className="grid grid-cols-1 sm:grid-cols-2 gap-3.5 pt-1">
-                      {otherEntries.map(([k, v]) => (
-                        <div
-                          key={k}
-                          className="p-3.5 rounded-xl bg-slate-900/70 border border-slate-800/80 hover:border-indigo-500/30 transition-all"
-                        >
-                          <p className="text-[11px] font-mono font-bold text-slate-400 uppercase tracking-wider">
-                            {k}
-                          </p>
-                          <p className="text-sm font-semibold text-slate-100 mt-1 break-words">
-                            {typeof v === "boolean" ? (v ? "True" : "False") : typeof v === "object" ? JSON.stringify(v) : String(v)}
-                          </p>
-                        </div>
-                      ))}
+                      {otherEntries.map(([k, v]) => {
+                        const isSensitive = isGovIdField(k);
+                        const isOtherRevealed = !!revealedGovIds[`other_${k}`];
+                        const displayVal = isSensitive && !isOtherRevealed
+                          ? maskGovId(v)
+                          : typeof v === "boolean"
+                          ? (v ? "True" : "False")
+                          : typeof v === "object"
+                          ? JSON.stringify(v)
+                          : String(v);
+
+                        return (
+                          <div
+                            key={k}
+                            className="p-3.5 rounded-xl bg-slate-900/70 border border-slate-800/80 hover:border-indigo-500/30 transition-all flex items-start justify-between gap-2"
+                          >
+                            <div className="min-w-0">
+                              <p className="text-[11px] font-mono font-bold text-slate-400 uppercase tracking-wider">
+                                {k}
+                              </p>
+                              <p className="text-sm font-semibold text-slate-100 mt-1 break-words font-mono select-none">
+                                {displayVal}
+                              </p>
+                            </div>
+                            {isSensitive && (
+                              <button
+                                type="button"
+                                onClick={() => toggleGovId(`other_${k}`)}
+                                className="p-1.5 rounded-lg bg-slate-950 border border-slate-800 text-slate-400 hover:text-cyan-300 transition-all shrink-0"
+                                title={isOtherRevealed ? "Hide Value" : "Click to Reveal Value"}
+                              >
+                                {isOtherRevealed ? (
+                                  <EyeOff className="w-3.5 h-3.5 text-amber-400" />
+                                ) : (
+                                  <Eye className="w-3.5 h-3.5 text-cyan-400" />
+                                )}
+                              </button>
+                            )}
+                          </div>
+                        );
+                      })}
                     </div>
                   )}
 

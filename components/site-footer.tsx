@@ -2,50 +2,76 @@
 
 import React from "react";
 import Link from "next/link";
-import { Shield, Heart, Lock } from "lucide-react";
+import { Shield, Lock, Radio, Zap, Heart } from "lucide-react";
 import { BrandLogo } from "@/components/brand-logo";
 
 export function SiteFooter() {
   return (
-    <footer className="relative z-10 border-t border-slate-800/80 bg-slate-950/90 backdrop-blur-xl py-12 text-slate-400">
-      <div className="max-w-6xl mx-auto px-4 sm:px-6">
+    <footer className="relative z-10 border-t border-slate-800/80 bg-[#030712]/95 backdrop-blur-xl py-12 text-slate-400">
+      <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         <div className="grid grid-cols-1 md:grid-cols-4 gap-8 pb-10 border-b border-slate-800/80">
           {/* Brand Info */}
           <div className="md:col-span-2 space-y-4">
-            <BrandLogo href="/" size="sm" />
+            <BrandLogo href="/" size="sm" showSubtitle={false} />
             <p className="text-xs text-slate-400 leading-relaxed max-w-sm">
-              Enterprise telecom intelligence, carrier routing diagnostics, and public records verification platform engineered with atomic wallet security and automated failure refunds.
+              Global virtual number marketplace for SMS activation, OTP bypass, and private account verifications. Seamless integration powered by the high-availability 5SIM protocol.
             </p>
-            <div className="flex items-center gap-2 text-[11px] text-slate-500">
-              <Shield className="w-3.5 h-3.5 text-cyan-400" />
-              <span>Compliant with DPDP Act 2023 & UIDAI Guidelines</span>
+            <div className="flex items-center gap-3 text-[11px] text-slate-400">
+              <span className="flex items-center gap-1.5 text-cyan-400 font-semibold">
+                <Radio className="w-3.5 h-3.5" />
+                150+ Countries Live
+              </span>
+              <span>•</span>
+              <span className="flex items-center gap-1.5 text-emerald-400 font-semibold">
+                <Shield className="w-3.5 h-3.5" />
+                100% Refund Guarantee
+              </span>
             </div>
           </div>
 
-          {/* Quick Services */}
+          {/* Quick Navigation */}
           <div className="space-y-3">
             <h4 className="text-xs font-bold text-white uppercase tracking-wider">
-              Verification Services
+              OTP Platform
             </h4>
             <ul className="space-y-2 text-xs">
               <li>
-                <Link href="/search/phone" className="hover:text-cyan-400 transition-colors">
-                  Phone Number Search (+91)
+                <Link href="/" className="hover:text-cyan-400 transition-colors">
+                  Buy Virtual Number
                 </Link>
               </li>
-              {/* Vehicle RC search and Refer program removed per user request */}
+              <li>
+                <Link href="/orders" className="hover:text-cyan-400 transition-colors">
+                  My Active Orders
+                </Link>
+              </li>
+              <li>
+                <Link href="/prices" className="hover:text-cyan-400 transition-colors">
+                  Live Rates & Catalog
+                </Link>
+              </li>
+              <li>
+                <Link href="/how-it-works" className="hover:text-cyan-400 transition-colors">
+                  How It Works
+                </Link>
+              </li>
+              <li>
+                <Link href="/api-docs" className="hover:text-cyan-400 transition-colors">
+                  Developer API
+                </Link>
+              </li>
             </ul>
           </div>
 
-          {/* Compliance & Legal (Mandatory for Razorpay & RBI) */}
+          {/* Legal & Compliance */}
           <div className="space-y-3">
             <h4 className="text-xs font-bold text-white uppercase tracking-wider">
-              Legal & Compliance
+              Legal & Support
             </h4>
             <ul className="space-y-2 text-xs">
               <li>
                 <Link href="/terms" className="hover:text-cyan-400 transition-colors">
-                  Terms & Conditions
+                  Terms of Service
                 </Link>
               </li>
               <li>
@@ -60,29 +86,24 @@ export function SiteFooter() {
               </li>
               <li>
                 <Link href="/contact" className="hover:text-cyan-400 transition-colors">
-                  Contact Us & Grievance
+                  Contact Support
                 </Link>
               </li>
             </ul>
           </div>
         </div>
 
-        {/* Bottom Bar & Disclaimer */}
+        {/* Bottom Bar */}
         <div className="pt-6 flex flex-col sm:flex-row items-center justify-between gap-4 text-[11px] text-slate-500">
-          <p>© {new Date().getFullYear()} UnMaskPeople.in. All rights reserved.</p>
+          <p>© {new Date().getFullYear()} NumVerge OTP. All rights reserved.</p>
 
           <div className="flex items-center gap-4">
-            <span className="flex items-center gap-1">
-              <Lock className="w-3 h-3 text-emerald-400" />
-              <span>Instant UPI & 256-Bit Encrypted Transfers</span>
+            <span className="flex items-center gap-1.5 text-slate-400">
+              <Lock className="w-3.5 h-3.5 text-cyan-400" />
+              <span>Encrypted Wallet • Instant Auto-Refunds</span>
             </span>
           </div>
         </div>
-
-        {/* Regulatory Disclaimer */}
-        <p className="mt-4 text-[10px] text-slate-600 leading-normal text-center sm:text-left">
-          Disclaimer: UnMaskPeople.in is an independent digital analytics SaaS platform providing routing telemetry and public registry intelligence. We do not store biometric data or sensitive Aadhaar identity records. All queries are conducted strictly in accordance with applicable Indian laws and the Digital Personal Data Protection Act 2023.
-        </p>
       </div>
     </footer>
   );
