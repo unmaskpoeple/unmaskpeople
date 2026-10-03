@@ -29,8 +29,8 @@ export async function POST(req: NextRequest) {
 
     const amount = Number(body.amount);
     const rawUtr = String(body.utr || "").trim();
-    // Sanitize UTR: strip whitespace, hyphens, slashes, convert to uppercase
-    const cleanUtr = rawUtr.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+    // Sanitize UTR: extract numeric digits only
+    const cleanUtr = rawUtr.replace(/[^0-9]/g, "").trim();
 
     // 2. Validate Amount
     if (isNaN(amount) || amount < 10) {
@@ -47,10 +47,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 3. Validate UTR length (Indian UPI UTRs are 12 digits, but allow 6-30 alphanumeric)
-    if (!cleanUtr || cleanUtr.length < 6 || cleanUtr.length > 30) {
+    // 3. Validate UTR: Indian NPCI UPI UTRs are strictly 12 numeric digits
+    if (!cleanUtr || !/^\d{12}$/.test(cleanUtr)) {
       return NextResponse.json(
-        { error: "Please enter a valid 12-digit UPI Reference Number / UTR." },
+        { error: "Invalid UPI Reference Number. Please enter the authentic 12-digit numeric UTR/Ref ID from your payment receipt (e.g. 428190123456)." },
         { status: 400 }
       );
     }
@@ -180,8 +180,9 @@ export async function POST(req: NextRequest) {
 
     const settings = await SettingsService.getAllSettings();
     const depositId = `utr_${cleanUtr}`;
-    // Auto-approve by default as requested: "they will paste the utr and the money will get added to the user account"
-    const isAutoApprove = settings.upi_auto_approve !== false;
+    // Auto-approve is disabled by default so fake/random UTRs cannot steal balance
+    // Manual deposits are safely queued for Administrator verification against bank statements
+    const isAutoApprove = settings.upi_auto_approve === true;
 
     if (isAutoApprove) {
       // ─────────────────────────────────────────────────────────────

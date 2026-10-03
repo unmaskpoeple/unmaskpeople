@@ -69,7 +69,7 @@ const DEFAULT_SETTINGS: SystemSettingsMap = {
   upi_id: process.env.NEXT_PUBLIC_UPI_ID || "numverge@upi",
   upi_payee_name: "NumVerge OTP",
   upi_qr_image_url: "",
-  upi_auto_approve: true,
+  upi_auto_approve: false,
   upi_min_deposit: 10,
   upi_instructions: "Scan the UPI QR code using any UPI app (GPay, PhonePe, Paytm, BHIM) and enter the 12-digit UTR/Reference number below.",
 

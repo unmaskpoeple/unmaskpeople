@@ -165,11 +165,11 @@ export function AddMoneyModal({
       return;
     }
 
-    const cleanUtr = utrNumber.replace(/[^a-zA-Z0-9]/g, "").toUpperCase().trim();
-    if (!cleanUtr || cleanUtr.length < 6) {
-      const err = "Please enter a valid 12-digit UPI Reference / UTR Number.";
+    const cleanUtr = utrNumber.replace(/[^0-9]/g, "").trim();
+    if (!cleanUtr || cleanUtr.length !== 12) {
+      const err = "Please enter the authentic 12-digit numeric UPI Reference / UTR Number from your payment app receipt.";
       setSubmitError(err);
-      toast.error("Invalid UTR", err);
+      toast.error("Invalid 12-Digit UTR", err);
       return;
     }
 
@@ -228,7 +228,7 @@ export function AddMoneyModal({
     }
   };
 
-  const cleanUtrDigits = utrNumber.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+  const cleanUtrDigits = utrNumber.replace(/[^0-9]/g, "");
 
   return (
     <div className="fixed inset-0 z-50 flex items-center justify-center p-2.5 sm:p-4 bg-slate-950/85 backdrop-blur-md animate-in fade-in duration-200 overflow-y-auto">
@@ -558,15 +558,17 @@ export function AddMoneyModal({
                   <div className="relative flex items-center">
                     <input
                       type="text"
+                      inputMode="numeric"
+                      pattern="[0-9]{12}"
                       required
                       value={utrNumber}
                       onChange={(e) => {
-                        const val = e.target.value.replace(/[^a-zA-Z0-9]/g, "").toUpperCase();
+                        const val = e.target.value.replace(/[^0-9]/g, "").slice(0, 12);
                         setUtrNumber(val);
                         setSubmitError("");
                       }}
                       placeholder="e.g. 428190123456"
-                      maxLength={25}
+                      maxLength={12}
                       className="w-full pl-3.5 pr-20 py-3 rounded-xl border border-slate-800 bg-slate-950 text-white text-sm sm:text-base font-mono tracking-wider focus:border-cyan-400 outline-none"
                     />
                     <button
