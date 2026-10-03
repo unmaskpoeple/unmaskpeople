@@ -113,7 +113,13 @@ export function OtpMarketplace() {
         const res = await fetch("/api/otp/orders?status=active");
         const data = await res.json();
         if (data.success && Array.isArray(data.orders)) {
-          setActiveOrders(data.orders);
+          const now = Date.now();
+          // Strictly filter out any expired or non-pending orders from home screen
+          const activeOnly = data.orders.filter(
+            (o: ActiveOtpOrder) =>
+              o.status === "PENDING" && new Date(o.expiresAt).getTime() > now
+          );
+          setActiveOrders(activeOnly);
         }
       } catch (e) {
         console.error("Failed to load active orders:", e);
@@ -121,6 +127,26 @@ export function OtpMarketplace() {
     }
     loadActiveOrders();
   }, [user]);
+
+  // Automatically prune expired or timed-out orders from the home screen every second
+  useEffect(() => {
+    if (activeOrders.length === 0) return;
+    const interval = setInterval(() => {
+      const now = Date.now();
+      setActiveOrders((prev) =>
+        prev.filter((o) => {
+          if (o.status === "CANCELED" || o.status === "TIMEOUT" || o.status === "BANNED") {
+            return false;
+          }
+          if (o.status === "PENDING" && new Date(o.expiresAt).getTime() <= now) {
+            return false;
+          }
+          return true;
+        })
+      );
+    }, 1000);
+    return () => clearInterval(interval);
+  }, [activeOrders.length]);
 
   // 3. Load Products whenever country or operator changes
   useEffect(() => {
@@ -375,9 +401,15 @@ export function OtpMarketplace() {
                 key={ord.id}
                 order={ord}
                 onOrderUpdated={(updated) => {
-                  setActiveOrders((prev) =>
-                    prev.map((o) => (o.id === updated.id ? updated : o))
-                  );
+                  if (updated.status === "CANCELED" || updated.status === "TIMEOUT" || updated.status === "BANNED") {
+                    setActiveOrders((prev) =>
+                      prev.filter((o) => o.id !== updated.id && String(o.fiveSimId) !== String(updated.fiveSimId))
+                    );
+                  } else {
+                    setActiveOrders((prev) =>
+                      prev.map((o) => (o.id === updated.id ? updated : o))
+                    );
+                  }
                 }}
                 onOrderDismiss={(id) => {
                   setActiveOrders((prev) =>

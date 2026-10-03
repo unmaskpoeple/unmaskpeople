@@ -41,12 +41,29 @@ export async function GET(req: NextRequest) {
         if (fsOrders.length > 0) {
           fsOrders.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
 
+          const now = new Date();
           if (filterStatus === "active") {
-            fsOrders = fsOrders.filter((o) => o.status === "PENDING");
+            // Exclude orders that are past expiresAt or not PENDING
+            fsOrders = fsOrders.filter((o) => {
+              const isPastExpiry = o.expiresAt && now > new Date(o.expiresAt);
+              if (isPastExpiry && o.status === "PENDING" && !o.isRefunded) {
+                // Auto-refund expired Firestore order in background
+                WalletService.refundForFailedRequest({
+                  userId: o.userId,
+                  amount: Number(o.cost || 0),
+                  referenceId: `auto_timeout_fs_${o.id}`,
+                  reason: `Order #${o.fiveSimId} expired without SMS received.`,
+                }).catch(() => {});
+              }
+              return o.status === "PENDING" && !isPastExpiry;
+            });
           } else if (filterStatus === "received") {
             fsOrders = fsOrders.filter((o) => o.status === "RECEIVED" || o.status === "FINISHED");
           } else if (filterStatus === "canceled") {
-            fsOrders = fsOrders.filter((o) => ["CANCELED", "TIMEOUT", "BANNED"].includes(o.status));
+            fsOrders = fsOrders.filter((o) => {
+              const isPastExpiry = o.expiresAt && now > new Date(o.expiresAt);
+              return ["CANCELED", "TIMEOUT", "BANNED"].includes(o.status) || isPastExpiry;
+            });
           }
 
           return NextResponse.json({
@@ -79,7 +96,8 @@ export async function GET(req: NextRequest) {
 
     // Check if any PENDING order is past expiry and not refunded yet
     const now = new Date();
-    for (const ord of orders) {
+    let finalOrders = [...orders];
+    for (const ord of finalOrders) {
       if (ord.status === "PENDING" && now > new Date(ord.expiresAt) && !ord.isRefunded) {
         try {
           await WalletService.refundForFailedRequest({
@@ -101,10 +119,17 @@ export async function GET(req: NextRequest) {
       }
     }
 
+    // If requesting active orders, strictly exclude expired / timed-out orders
+    if (filterStatus === "active") {
+      finalOrders = finalOrders.filter(
+        (o) => o.status === "PENDING" && new Date(o.expiresAt) > now
+      );
+    }
+
     return NextResponse.json({
       success: true,
-      count: orders.length,
-      orders,
+      count: finalOrders.length,
+      orders: finalOrders,
     });
   } catch (error: any) {
     console.error("Error in /api/otp/orders:", error);

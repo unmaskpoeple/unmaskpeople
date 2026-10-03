@@ -66,6 +66,8 @@ export function ActiveOtpCard({
 
   // Countdown timer
   useEffect(() => {
+    let hasDismissed = false;
+
     const updateCountdown = () => {
       const expiry = new Date(order.expiresAt).getTime();
       const now = Date.now();
@@ -74,6 +76,22 @@ export function ActiveOtpCard({
       if (diff <= 0) {
         setTimeLeft("00:00");
         setIsExpired(true);
+        if (!hasDismissed && order.status === "PENDING") {
+          hasDismissed = true;
+          // Notify backend check to ensure refund is registered
+          fetch(`/api/otp/check?orderId=${order.id}&fiveSimId=${order.fiveSimId}`).catch(() => {});
+          toast({
+            title: "Order Expired",
+            description: "Time limit reached. 100% refunded to your wallet.",
+            variant: "info",
+          });
+          onOrderUpdated?.({ ...order, status: "TIMEOUT" });
+          refreshUser();
+          // Automatically remove from home screen
+          setTimeout(() => {
+            onOrderDismiss?.(order.id);
+          }, 1500);
+        }
       } else {
         const minutes = Math.floor(diff / (1000 * 60));
         const seconds = Math.floor((diff % (1000 * 60)) / 1000);
@@ -86,14 +104,14 @@ export function ActiveOtpCard({
     updateCountdown();
     const interval = setInterval(updateCountdown, 1000);
     return () => clearInterval(interval);
-  }, [order.expiresAt]);
+  }, [order.expiresAt, order.id, order.fiveSimId, order.status, onOrderDismiss, onOrderUpdated, refreshUser, toast]);
 
   // Polling for incoming SMS if status is PENDING
   const pollStatus = useCallback(async () => {
     if (order.status !== "PENDING" || isExpired) return;
 
     try {
-      const res = await fetch(`/api/otp/check?orderId=${order.id}`);
+      const res = await fetch(`/api/otp/check?orderId=${order.id}&fiveSimId=${order.fiveSimId}`);
       if (res.ok) {
         const data = await res.json();
         if (data.success && data.order) {
@@ -107,16 +125,19 @@ export function ActiveOtpCard({
               const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3");
               audio.play().catch(() => {});
             } catch {}
-          } else if (data.autoRefunded) {
-            toast.info("Order Timed Out", "No SMS was received in time. Your wallet has been 100% refunded.");
+          } else if (data.autoRefunded || data.order.status === "TIMEOUT" || data.order.status === "CANCELED") {
+            toast.info("Order Expired", "No SMS was received in time. Your wallet has been 100% refunded.");
             refreshUser();
+            setTimeout(() => {
+              onOrderDismiss?.(order.id);
+            }, 1500);
           }
         }
       }
     } catch (e) {
       console.warn("Poll check error:", e);
     }
-  }, [order.id, order.status, isExpired, onOrderUpdated, refreshUser, toast]);
+  }, [order.id, order.fiveSimId, order.status, isExpired, onOrderUpdated, onOrderDismiss, refreshUser, toast]);
 
   useEffect(() => {
     if (order.status !== "PENDING" || isExpired) return;
