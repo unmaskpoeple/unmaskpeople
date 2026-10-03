@@ -159,25 +159,33 @@ export function ActiveOtpCard({
       const res = await fetch("/api/otp/cancel", {
         method: "POST",
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ orderId: order.id }),
+        body: JSON.stringify({ orderId: order.id, fiveSimId: order.fiveSimId }),
       });
 
       const data = await res.json();
       if (res.ok && data.success) {
-        setOrder(data.order);
-        onOrderUpdated?.(data.order);
+        const updatedOrder: ActiveOtpOrder = data.order || { ...order, status: "CANCELED" };
+        setOrder(updatedOrder);
+        onOrderUpdated?.(updatedOrder);
         if (data.newBalance !== undefined) {
           updateBalanceLocally(data.newBalance);
+        } else {
+          refreshUser();
         }
         toast({
-          title: "Order Cancelled",
-          description: "100% refund credited back to your wallet.",
+          title: "Order Cancelled & Refunded",
+          description: "100% refund credited back to your wallet. Closing window...",
           variant: "success",
         });
+
+        // Automatically dismiss the card after a moment so the window disappears
+        setTimeout(() => {
+          onOrderDismiss?.(order.id);
+        }, 1000);
       } else {
         toast({
-          title: "Cancel Failed",
-          description: data.error || "Unable to cancel order.",
+          title: "Cancel Notice",
+          description: data.error || "Unable to cancel with carrier. You can close this window.",
           variant: "destructive",
         });
       }
@@ -299,10 +307,11 @@ export function ActiveOtpCard({
           {onOrderDismiss && (
             <button
               onClick={() => onOrderDismiss(order.id)}
-              className="p-1 rounded-lg text-slate-500 hover:text-slate-300 hover:bg-slate-800 transition"
-              title="Hide Card"
+              className="flex items-center gap-1 px-2.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-slate-300 hover:text-white border border-slate-700 text-xs font-bold transition shadow-sm ml-1"
+              title="Close Window"
             >
-              <X className="w-4 h-4" />
+              <X className="w-3.5 h-3.5" />
+              <span>Close</span>
             </button>
           )}
         </div>
@@ -403,11 +412,20 @@ export function ActiveOtpCard({
 
       {/* CANCELED / REFUNDED STATE */}
       {isCanceled && (
-        <div className="p-4 rounded-2xl bg-rose-950/20 border border-rose-800/40 text-xs text-slate-300 flex items-center justify-between gap-3">
+        <div className="p-4 rounded-2xl bg-rose-950/30 border border-rose-800/50 text-xs text-slate-300 flex flex-col sm:flex-row sm:items-center justify-between gap-3">
           <div className="flex items-center gap-2">
             <AlertCircle className="w-4 h-4 text-rose-400 flex-shrink-0" />
-            <span>This order was cancelled or timed out. 100% of the cost was automatically refunded to your wallet.</span>
+            <span>This order was cancelled or timed out. 100% of the cost was refunded to your wallet.</span>
           </div>
+          {onOrderDismiss && (
+            <button
+              onClick={() => onOrderDismiss(order.id)}
+              className="flex items-center justify-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-800 hover:bg-slate-700 active:scale-95 text-white font-bold text-xs transition border border-slate-700 self-end sm:self-auto shrink-0 shadow"
+            >
+              <X className="w-3.5 h-3.5" />
+              <span>Close Window</span>
+            </button>
+          )}
         </div>
       )}
 
@@ -418,12 +436,23 @@ export function ActiveOtpCard({
         </div>
 
         <div className="flex items-center gap-2">
+          {/* Close Window Button (Always accessible to dismiss the card) */}
+          {onOrderDismiss && (
+            <button
+              onClick={() => onOrderDismiss(order.id)}
+              className="flex items-center gap-1.5 px-3 py-1.5 rounded-xl bg-slate-800/80 hover:bg-slate-700 text-slate-300 hover:text-white border border-slate-700 text-xs font-semibold transition active:scale-95"
+            >
+              <X className="w-3.5 h-3.5" />
+              <span>Close Window</span>
+            </button>
+          )}
+
           {/* Cancel button: Only available before SMS is received */}
           {isPending && (
             <button
               onClick={handleCancelOrder}
               disabled={cancelling}
-              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-slate-800/80 hover:bg-rose-950/50 border border-slate-700 hover:border-rose-800/60 text-slate-300 hover:text-rose-300 text-xs font-semibold transition active:scale-95 disabled:opacity-50"
+              className="flex items-center gap-1.5 px-3.5 py-1.5 rounded-xl bg-rose-950/70 hover:bg-rose-900 border border-rose-800/80 text-rose-200 hover:text-white text-xs font-bold transition active:scale-95 disabled:opacity-50 shadow-sm shadow-rose-950/50"
             >
               <Trash2 className="w-3.5 h-3.5" />
               <span>{cancelling ? "Refunding..." : "Cancel & Refund"}</span>

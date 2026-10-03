@@ -380,7 +380,9 @@ export function OtpMarketplace() {
                   );
                 }}
                 onOrderDismiss={(id) => {
-                  setActiveOrders((prev) => prev.filter((o) => o.id !== id));
+                  setActiveOrders((prev) =>
+                    prev.filter((o) => o.id !== id && String(o.fiveSimId) !== String(id))
+                  );
                 }}
               />
             ))}

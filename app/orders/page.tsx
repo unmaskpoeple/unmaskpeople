@@ -186,6 +186,11 @@ export default function MyOrdersPage() {
                       prev.map((item) => (item.id === upd.id ? upd : item))
                     );
                   }}
+                  onOrderDismiss={(id) => {
+                    setOrders((prev) =>
+                      prev.filter((o) => o.id !== id && String(o.fiveSimId) !== String(id))
+                    );
+                  }}
                 />
               ))}
 
