@@ -4,10 +4,19 @@ import { SettingsService } from "@/services/settings.service";
 import { WalletService } from "@/services/wallet.service";
 import prisma from "@/lib/prisma";
 import { db } from "@/lib/firebase";
+import { FS_COLLECTIONS } from "@/lib/collections";
 import { collection, doc, setDoc, getDoc, getDocs, query, where } from "firebase/firestore";
 
 export async function POST(req: NextRequest) {
   try {
+    // Capture Client Telemetry for Safe Harbor & Cyber Law Compliance
+    const ipAddress =
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      req.headers.get("x-real-ip") ||
+      "127.0.0.1";
+    const userAgent = req.headers.get("user-agent") || "Unknown";
+    const nowIso = new Date().toISOString();
+
     // 1. Resolve Authenticated User if present
     let sessionUser: any = null;
     try {
@@ -58,10 +67,10 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // If userId not found from session, try finding user in Firestore by email
+    // If userId not found from session, try finding user in Firestore by email (namespaced)
     if (!userId && db) {
       try {
-        const userQuery = query(collection(db, "users"), where("email", "==", userEmail));
+        const userQuery = query(collection(db, FS_COLLECTIONS.USERS), where("email", "==", userEmail));
         const userSnap = await getDocs(userQuery);
         if (!userSnap.empty) {
           userId = userSnap.docs[0].id;
@@ -79,15 +88,51 @@ export async function POST(req: NextRequest) {
       } catch {}
     }
 
+    // If user is still not registered in Prisma/Firestore, create account on the fly
     if (!userId) {
-      userId = `anon_${cleanUtr.slice(0, 8)}_${Date.now()}`;
+      userId = `usr_${Date.now()}_${Math.random().toString(36).substring(2, 6)}`;
+      try {
+        const newPrismaUser = await prisma.user.create({
+          data: {
+            id: userId,
+            name: userName,
+            email: userEmail,
+            passwordHash: userId,
+            role: "USER",
+            status: "ACTIVE",
+            emailVerified: true,
+            wallet: {
+              create: {
+                balance: 0.0,
+                currency: "INR",
+              },
+            },
+          },
+        });
+        userId = newPrismaUser.id;
+      } catch {}
+
+      if (db) {
+        try {
+          await setDoc(doc(db, FS_COLLECTIONS.USERS, userId), {
+            id: userId,
+            uid: userId,
+            name: userName,
+            email: userEmail,
+            role: "USER",
+            walletBalance: 0.0,
+            status: "ACTIVE",
+            createdAt: nowIso,
+          });
+        } catch {}
+      }
     }
 
     // 5. ENFORCE STRICT SINGLE-USE UTR CONSTRAINT
-    // Check A: Firestore direct primary key lookup (O(1) foolproof check)
+    // Check A: Firestore direct primary key lookup (namespaced)
     if (db) {
       try {
-        const utrDocRef = doc(db, "upi_deposits", `utr_${cleanUtr}`);
+        const utrDocRef = doc(db, FS_COLLECTIONS.UPI_DEPOSITS, `utr_${cleanUtr}`);
         const utrDocSnap = await getDoc(utrDocRef);
         if (utrDocSnap.exists()) {
           return NextResponse.json(
@@ -97,7 +142,7 @@ export async function POST(req: NextRequest) {
         }
 
         // Check B: Query for legacy deposits where document ID was randomized
-        const q1 = query(collection(db, "upi_deposits"), where("utr", "==", cleanUtr));
+        const q1 = query(collection(db, FS_COLLECTIONS.UPI_DEPOSITS), where("utr", "==", cleanUtr));
         const snap1 = await getDocs(q1);
         if (!snap1.empty) {
           return NextResponse.json(
@@ -134,45 +179,85 @@ export async function POST(req: NextRequest) {
     } catch {}
 
     const settings = await SettingsService.getAllSettings();
-    // Unique deposit ID anchored to cleanUtr
     const depositId = `utr_${cleanUtr}`;
-    const nowIso = new Date().toISOString();
-    const isAutoApprove = settings.upi_auto_approve === true;
+    // Auto-approve by default as requested: "they will paste the utr and the money will get added to the user account"
+    const isAutoApprove = settings.upi_auto_approve !== false;
 
-    if (isAutoApprove && userId && !userId.startsWith("anon_")) {
-      // ─────────────────────────────────────────────
-      // AUTO-APPROVAL FLOW: Instantly credit wallet
-      // ─────────────────────────────────────────────
+    if (isAutoApprove) {
+      // ─────────────────────────────────────────────────────────────
+      // INSTANT UTR AUTO-APPROVAL FLOW: Immediately credit wallet
+      // ─────────────────────────────────────────────────────────────
+      let updatedBalance = amount;
+
+      // 1. Credit Wallet in Cloud Firestore and Prisma
       try {
-        await WalletService.depositFunds({
+        const depositResult = await WalletService.depositFunds({
           userId,
           amount,
           referenceId: cleanUtr,
           description: `Instant UPI auto-credit (UTR: ${cleanUtr})`,
           gateway: "MANUAL_UPI",
         });
+        if (depositResult.success) {
+          updatedBalance = depositResult.balanceAfter;
+        }
       } catch (e) {
-        console.warn("Prisma depositFunds error:", e);
+        console.warn("Wallet depositFunds error:", e);
       }
 
-      // Also ensure Firestore user wallet balance is incremented
-      let updatedBalance = amount;
-      if (db) {
-        try {
-          const userRef = doc(db, "users", userId);
-          const uSnap = await getDoc(userRef);
-          if (uSnap.exists()) {
-            const currentBal = Number((uSnap.data().walletBalance ?? 0.0).toFixed(2));
-            updatedBalance = Number((currentBal + amount).toFixed(2));
-            await setDoc(userRef, { walletBalance: updatedBalance }, { merge: true });
-          }
-        } catch {}
+      // 3. Record Payment in Prisma for accounting and legal compliance
+      try {
+        await prisma.payment.create({
+          data: {
+            id: depositId,
+            userId,
+            gateway: "MANUAL_UPI",
+            gatewayReference: cleanUtr,
+            amount,
+            currency: "INR",
+            status: "SUCCESSFUL",
+            metadata: JSON.stringify({
+              utr: cleanUtr,
+              originalUtr: rawUtr,
+              userEmail,
+              userName,
+              ipAddress,
+              userAgent,
+              submittedAt: nowIso,
+              approvedAt: nowIso,
+              approvedBy: "INSTANT_UTR_SYSTEM",
+            }),
+          },
+        });
+      } catch (payErr) {
+        console.warn("Prisma Payment save error:", payErr);
       }
 
-      // Record deposit in Firestore
+      // 4. Log Audit Activity for safe harbor & cyber cell compliance
+      try {
+        await prisma.auditLog.create({
+          data: {
+            action: "UPI_DEPOSIT_INSTANT_CREDIT",
+            targetType: "PAYMENT",
+            targetId: cleanUtr,
+            ipAddress,
+            metadata: JSON.stringify({
+              userId,
+              userEmail,
+              amount,
+              utr: cleanUtr,
+              ipAddress,
+              userAgent,
+              timestamp: nowIso,
+            }),
+          },
+        });
+      } catch {}
+
+      // 5. Record deposit in Firestore (namespaced)
       if (db) {
         try {
-          await setDoc(doc(db, "upi_deposits", depositId), {
+          await setDoc(doc(db, FS_COLLECTIONS.UPI_DEPOSITS, depositId), {
             id: depositId,
             userId,
             userName,
@@ -180,10 +265,12 @@ export async function POST(req: NextRequest) {
             amount,
             utr: cleanUtr,
             originalUtr: rawUtr,
+            ipAddress,
+            userAgent,
             status: "APPROVED",
             gateway: "MANUAL_UPI",
             approvedAt: nowIso,
-            approvedBy: "AUTO_APPROVAL_SYSTEM",
+            approvedBy: "INSTANT_UTR_SYSTEM",
             createdAt: nowIso,
             updatedAt: nowIso,
           });
@@ -195,15 +282,15 @@ export async function POST(req: NextRequest) {
         status: "APPROVED",
         depositId,
         walletBalance: updatedBalance,
-        message: `₹${amount.toFixed(2)} credited to ${userEmail} successfully!`,
+        message: `₹${amount.toFixed(2)} credited to your account (${userEmail}) instantly! UTR: ${cleanUtr}`,
       });
     } else {
       // ─────────────────────────────────────────────
-      // MANUAL ADMIN REVIEW FLOW: Record as PENDING
+      // MANUAL REVIEW FLOW (Fallback if auto-approve explicitly turned off)
       // ─────────────────────────────────────────────
       if (db) {
         try {
-          await setDoc(doc(db, "upi_deposits", depositId), {
+          await setDoc(doc(db, FS_COLLECTIONS.UPI_DEPOSITS, depositId), {
             id: depositId,
             userId,
             userName,
@@ -211,6 +298,8 @@ export async function POST(req: NextRequest) {
             amount,
             utr: cleanUtr,
             originalUtr: rawUtr,
+            ipAddress,
+            userAgent,
             status: "PENDING",
             gateway: "MANUAL_UPI",
             createdAt: nowIso,
@@ -221,28 +310,27 @@ export async function POST(req: NextRequest) {
         }
       }
 
-      // Save Prisma Payment record if user exists in Prisma
       try {
-        if (!userId.startsWith("anon_")) {
-          await prisma.payment.create({
-            data: {
-              id: depositId,
-              userId,
-              gateway: "MANUAL_UPI",
-              gatewayReference: cleanUtr,
-              amount,
-              currency: "INR",
-              status: "PENDING",
-              metadata: JSON.stringify({
-                utr: cleanUtr,
-                originalUtr: rawUtr,
-                userEmail,
-                userName,
-                submittedAt: nowIso,
-              }),
-            },
-          });
-        }
+        await prisma.payment.create({
+          data: {
+            id: depositId,
+            userId,
+            gateway: "MANUAL_UPI",
+            gatewayReference: cleanUtr,
+            amount,
+            currency: "INR",
+            status: "PENDING",
+            metadata: JSON.stringify({
+              utr: cleanUtr,
+              originalUtr: rawUtr,
+              userEmail,
+              userName,
+              ipAddress,
+              userAgent,
+              submittedAt: nowIso,
+            }),
+          },
+        });
       } catch {}
 
       return NextResponse.json({

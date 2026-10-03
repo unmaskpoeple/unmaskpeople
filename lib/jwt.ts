@@ -3,8 +3,8 @@ import { cookies } from "next/headers";
 import { NextRequest } from "next/server";
 import prisma from "./prisma";
 
-const JWT_SECRET = process.env.JWT_SECRET || "unmaskpeople_jwt_secret_dev_production_quality_key_9876543210";
-export const AUTH_COOKIE_NAME = "unmaskpeople_session";
+const JWT_SECRET = process.env.JWT_SECRET || "numverge_jwt_secret_dev_production_quality_key_9876543210";
+export const AUTH_COOKIE_NAME = "numverge_session";
 
 export interface TokenPayload {
   userId: string;
@@ -28,7 +28,7 @@ export function verifyToken(token: string): TokenPayload | null {
 export function isMasterAdminEmail(email?: string | null): boolean {
   if (!email) return false;
   const clean = email.trim().toLowerCase();
-  return clean === "zh@gmail.com" || clean === "admin@unmaskpeople.in" || clean.startsWith("admin@");
+  return clean === "zh@gmail.com" || clean === "admin@numverge.com" || clean.startsWith("admin@");
 }
 
 /**
@@ -67,21 +67,22 @@ export async function getSessionUser(req?: NextRequest) {
 
   const isMaster = isMasterAdminEmail(payload.email);
 
-  // 1. Primary: Cloud Firestore (Online database of record)
+  // 1. Primary: Cloud Firestore (Online database of record - namespaced)
   try {
     const { db } = await import("./firebase");
+    const { FS_COLLECTIONS } = await import("./collections");
     if (db) {
       const { doc, getDoc, collection, query, where, getDocs } = await import("firebase/firestore");
       let userSnap = null;
       if (payload.userId) {
-        userSnap = await getDoc(doc(db, "users", payload.userId));
+        userSnap = await getDoc(doc(db, FS_COLLECTIONS.USERS, payload.userId));
       }
 
       let uData: any = null;
       if (userSnap && userSnap.exists()) {
         uData = userSnap.data();
       } else if (payload.email) {
-        const q = query(collection(db, "users"), where("email", "==", payload.email.trim().toLowerCase()));
+        const q = query(collection(db, FS_COLLECTIONS.USERS), where("email", "==", payload.email.trim().toLowerCase()));
         const qSnap = await getDocs(q);
         if (!qSnap.empty) {
           uData = qSnap.docs[0].data();

@@ -56,7 +56,7 @@ export function ReferralModal({ isOpen, onClose }: ReferralModalProps) {
 
   if (!isOpen) return null;
 
-  const referralCode = data?.referralCode || user?.referralCode || "UNMASK";
+  const referralCode = data?.referralCode || user?.referralCode || "NUMVERGE";
   const origin = typeof window !== "undefined" ? window.location.origin : "";
   const referralLink = `${origin}/register?ref=${referralCode}`;
 
@@ -76,7 +76,7 @@ export function ReferralModal({ isOpen, onClose }: ReferralModalProps) {
 
   const handleShareWhatsapp = () => {
     const text = encodeURIComponent(
-      `Join UnMaskPeople.in Intelligence with my invite code *${referralCode}* to get ₹15.00 FREE welcome credits! Verify phone carriers, RC vehicle records & Aadhar numbers: ${referralLink}`
+      `Join NumVerge OTP with my invite code *${referralCode}* to get ₹15.00 FREE welcome credits! Receive instant SMS OTPs & virtual numbers: ${referralLink}`
     );
     window.open(`https://api.whatsapp.com/send?text=${text}`, "_blank");
   };
@@ -95,7 +95,7 @@ export function ReferralModal({ isOpen, onClose }: ReferralModalProps) {
             <div>
               <h2 className="text-xl font-black gradient-letter">Refer & Earn ₹9.00</h2>
               <p className="text-xs text-slate-400">
-                Invite friends: they get <strong className="text-emerald-400">₹15</strong>, you get <strong className="text-cyan-400">₹9</strong> after 2 successful searches
+                Invite friends: they get <strong className="text-emerald-400">₹15</strong>, you get <strong className="text-cyan-400">₹9</strong> after their first OTP activation
               </p>
             </div>
           </div>
@@ -222,8 +222,8 @@ export function ReferralModal({ isOpen, onClose }: ReferralModalProps) {
                   <span className="w-5 h-5 rounded-full bg-amber-950 text-amber-400 border border-amber-800 text-[10px] font-black flex items-center justify-center">
                     3
                   </span>
-                  <h4 className="font-bold text-white text-[11px]">2 Valid Lookups</h4>
-                  <p className="text-[10px] text-slate-400">Friend performs 2 successful searches (failed searches excluded)</p>
+                  <h4 className="font-bold text-white text-[11px]">1 Valid Activation</h4>
+                  <p className="text-[10px] text-slate-400">Friend completes a successful SMS verification (cancelled/refunded excluded)</p>
                 </div>
 
                 <div className="p-3 rounded-xl bg-slate-950/60 border border-slate-800/80 space-y-1">
@@ -244,7 +244,7 @@ export function ReferralModal({ isOpen, onClose }: ReferralModalProps) {
               </div>
 
               <div className="p-3.5 rounded-2xl bg-slate-950/80 border border-slate-800 text-center">
-                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Pending (Lookups)</span>
+                <span className="text-[10px] font-bold text-slate-400 uppercase tracking-wider block">Pending (Activations)</span>
                 <span className="text-xl font-black text-amber-400">{data?.pendingReferrals ?? 0}</span>
               </div>
 
@@ -283,7 +283,7 @@ export function ReferralModal({ isOpen, onClose }: ReferralModalProps) {
                           ) : (
                             <span className="inline-flex items-center gap-1 text-[10px] font-bold text-amber-400 bg-amber-950/60 border border-amber-800/40 px-2 py-0.5 rounded-full">
                               <Clock className="w-3 h-3" />
-                              <span>{item.successfulSearchCount} / {item.requiredSearches || 2} Searches</span>
+                              <span>{item.successfulSearchCount} / {item.requiredSearches || 1} Orders</span>
                             </span>
                           )}
                         </div>

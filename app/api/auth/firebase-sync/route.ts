@@ -28,7 +28,8 @@ export async function POST(req: NextRequest) {
     if (db) {
       try {
         const { collection, query, where, getDocs } = await import("firebase/firestore");
-        const userDocRef = doc(db, "users", userId);
+        const { FS_COLLECTIONS } = await import("@/lib/collections");
+        const userDocRef = doc(db, FS_COLLECTIONS.USERS, userId);
         const userSnap = await getDoc(userDocRef);
 
         let existingDocSnap = userSnap.exists() ? userSnap : null;
@@ -36,7 +37,7 @@ export async function POST(req: NextRequest) {
 
         // If not found by document ID, check by email to prevent duplicate documents
         if (!existingDocSnap) {
-          const q = query(collection(db, "users"), where("email", "==", cleanEmail));
+          const q = query(collection(db, FS_COLLECTIONS.USERS), where("email", "==", cleanEmail));
           const qSnap = await getDocs(q);
           if (!qSnap.empty) {
             existingDocSnap = qSnap.docs[0];

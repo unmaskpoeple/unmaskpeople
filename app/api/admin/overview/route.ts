@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/jwt";
 import prisma from "@/lib/prisma";
 import { db } from "@/lib/firebase";
+import { FS_COLLECTIONS } from "@/lib/collections";
 import { collection, getDocs } from "firebase/firestore";
 
 export const dynamic = "force-dynamic";
@@ -10,20 +11,21 @@ export async function GET(req: NextRequest) {
   try {
     await requireAdmin(req);
 
-    let totalUsers = 1;
-    let activeUsers = 1;
+    let totalUsers = 0;
+    let activeUsers = 0;
     let totalWalletBalance = 0;
     let totalDeposits = 0;
     let totalRevenue = 0;
-    let totalRequests = 0;
-    let successfulRequests = 0;
-    let failedRequests = 0;
-    let recentRequests: any[] = [];
+    let totalOrders = 0;
+    let successfulOrders = 0;
+    let pendingOrders = 0;
+    let refundedOrders = 0;
+    let recentOrders: any[] = [];
     let recentAudits: any[] = [];
 
     // Map for 7-day chart buckets
     const now = new Date();
-    const daysMap = new Map<string, { requests: number; successful: number; revenue: number; deposits: number }>();
+    const daysMap = new Map<string, { orders: number; successful: number; revenue: number; deposits: number }>();
     const dayLabels: string[] = [];
 
     for (let i = 6; i >= 0; i--) {
@@ -32,14 +34,14 @@ export async function GET(req: NextRequest) {
       const dayKey = d.toISOString().split("T")[0]; // YYYY-MM-DD
       const label = d.toLocaleDateString("en-US", { weekday: "short" });
       dayLabels.push(label);
-      daysMap.set(dayKey, { requests: 0, successful: 0, revenue: 0, deposits: 0 });
+      daysMap.set(dayKey, { orders: 0, successful: 0, revenue: 0, deposits: 0 });
     }
 
-    // 1. Try Cloud Firestore (Primary Live Cloud Database)
+    // 1. Primary: Cloud Firestore (Strictly Namespaced NumVerge Collections)
     if (db) {
-      // 1a. Users
+      // 1a. NumVerge Users
       try {
-        const usersSnapshot = await getDocs(collection(db, "users"));
+        const usersSnapshot = await getDocs(collection(db, FS_COLLECTIONS.USERS));
         if (!usersSnapshot.empty) {
           totalUsers = usersSnapshot.size;
           let act = 0;
@@ -53,12 +55,12 @@ export async function GET(req: NextRequest) {
           totalWalletBalance = Number(sumBal.toFixed(2));
         }
       } catch (fsUsersErr) {
-        console.warn("Firestore overview users read skipped:", fsUsersErr);
+        console.warn("Firestore overview numverge_users read skipped:", fsUsersErr);
       }
 
-      // 1b. UPI Deposits
+      // 1b. NumVerge UPI Deposits
       try {
-        const depSnapshot = await getDocs(collection(db, "upi_deposits"));
+        const depSnapshot = await getDocs(collection(db, FS_COLLECTIONS.UPI_DEPOSITS));
         if (!depSnapshot.empty) {
           let sumDep = 0;
           depSnapshot.forEach((doc) => {
@@ -79,78 +81,81 @@ export async function GET(req: NextRequest) {
           totalDeposits = Number(sumDep.toFixed(2));
         }
       } catch (fsDepErr) {
-        console.warn("Firestore overview deposits read skipped:", fsDepErr);
+        console.warn("Firestore overview numverge_upi_deposits read skipped:", fsDepErr);
       }
 
-      // 1c. Search & Operational Requests
+      // 1c. NumVerge OTP Orders
       try {
-        const reqSnapshot = await getDocs(collection(db, "requests"));
-        if (!reqSnapshot.empty) {
-          totalRequests = reqSnapshot.size;
+        const orderSnapshot = await getDocs(collection(db, FS_COLLECTIONS.OTP_ORDERS));
+        if (!orderSnapshot.empty) {
+          totalOrders = orderSnapshot.size;
           let succ = 0;
-          let fail = 0;
+          let pend = 0;
+          let ref = 0;
           let rev = 0;
-          const allReqs: any[] = [];
+          const allOrders: any[] = [];
 
-          reqSnapshot.forEach((doc) => {
+          orderSnapshot.forEach((doc) => {
             const d = doc.data();
-            const rStatus = d.status || "SUCCESSFUL";
-            const isRef = Boolean(d.isRefunded);
-            const amt = Number(d.amountCharged || 0);
+            const oStatus = d.status || "PENDING";
+            const cost = Number(d.cost || 0);
+            const isRefunded = Boolean(d.isRefunded || oStatus === "CANCELED" || oStatus === "TIMEOUT");
 
-            if (rStatus === "SUCCESSFUL" && !isRef) {
+            if (oStatus === "FINISHED" || oStatus === "RECEIVED" || d.smsCode) {
               succ++;
-              rev += amt;
-            } else {
-              fail++;
+              rev += cost;
+            } else if (oStatus === "PENDING") {
+              pend++;
+            } else if (isRefunded) {
+              ref++;
             }
 
             const createdAtStr = d.createdAt || new Date().toISOString();
 
-            allReqs.push({
+            allOrders.push({
               id: doc.id,
-              maskedPhone: d.phone || d.maskedPhone || "Lookup Target",
-              status: rStatus,
-              amountCharged: isRef ? 0 : amt,
-              isRefunded: isRef,
-              latencyMs: Number(d.latencyMs || 0),
+              phone: d.phone,
+              serviceName: d.serviceName || d.service || "SMS Service",
+              countryName: d.countryName || d.country || "Global",
+              operator: d.operator || "any",
+              status: oStatus,
+              cost,
+              smsCode: d.smsCode || null,
+              isRefunded,
               createdAt: createdAtStr,
               user: {
                 name: d.userName || "Subscriber",
                 email: d.userEmail || "",
               },
-              apiConfig: {
-                name: d.apiUsed || d.apiName || "Telecom Core API",
-              },
             });
 
             // Bucket into 7-day chart
-            const reqDate = new Date(createdAtStr).toISOString().split("T")[0];
-            if (daysMap.has(reqDate)) {
-              const bucket = daysMap.get(reqDate)!;
-              bucket.requests++;
-              if (rStatus === "SUCCESSFUL" && !isRef) {
+            const ordDate = new Date(createdAtStr).toISOString().split("T")[0];
+            if (daysMap.has(ordDate)) {
+              const bucket = daysMap.get(ordDate)!;
+              bucket.orders++;
+              if (oStatus === "FINISHED" || oStatus === "RECEIVED" || d.smsCode) {
                 bucket.successful++;
-                bucket.revenue += amt;
+                bucket.revenue += cost;
               }
             }
           });
 
-          successfulRequests = succ;
-          failedRequests = fail;
+          successfulOrders = succ;
+          pendingOrders = pend;
+          refundedOrders = ref;
           totalRevenue = Number(rev.toFixed(2));
 
-          // Sort descending and take latest 6
-          allReqs.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
-          recentRequests = allReqs.slice(0, 6);
+          allOrders.sort((a, b) => new Date(b.createdAt).getTime() - new Date(a.createdAt).getTime());
+          recentOrders = allOrders.slice(0, 8);
         }
-      } catch (fsReqErr) {
-        console.warn("Firestore overview requests read skipped:", fsReqErr);
+      } catch (fsOrdErr) {
+        console.warn("Firestore overview numverge_otp_orders read skipped:", fsOrdErr);
       }
 
-      // 1d. Audit Logs
+      // 1d. NumVerge Audit Logs
       try {
-        const audSnapshot = await getDocs(collection(db, "audit_logs"));
+        const audSnapshot = await getDocs(collection(db, FS_COLLECTIONS.AUDIT_LOGS));
         if (!audSnapshot.empty) {
           const allAuds: any[] = [];
           audSnapshot.forEach((doc) => {
@@ -160,6 +165,7 @@ export async function GET(req: NextRequest) {
               action: d.action || "SYSTEM_EVENT",
               targetType: d.targetType || "SYSTEM",
               targetId: d.targetId || "Global",
+              ipAddress: d.ipAddress || null,
               createdAt: d.createdAt || new Date().toISOString(),
               admin: {
                 name: d.adminName || "System Operator",
@@ -171,90 +177,92 @@ export async function GET(req: NextRequest) {
           recentAudits = allAuds.slice(0, 5);
         }
       } catch (fsAudErr) {
-        console.warn("Firestore overview audit_logs read skipped:", fsAudErr);
+        console.warn("Firestore overview numverge_audit_logs read skipped:", fsAudErr);
       }
     }
 
-    // 2. Fallback or augment with Prisma (if available locally)
+    // 2. Secondary: Prisma SQLite Local DB (Sync/Augment)
     try {
-      if (totalRequests === 0) {
-        const [
-          pTotalUsers,
-          pActiveUsers,
-          walletsAggregate,
-          depositsAggregate,
-          chargesAggregate,
-          pTotalRequests,
-          pSuccessfulRequests,
-          pFailedRequests,
-          pRecentRequests,
-          pRecentAudits,
-        ] = await Promise.all([
-          prisma.user.count(),
-          prisma.user.count({ where: { status: "ACTIVE" } }),
-          prisma.wallet.aggregate({ _sum: { balance: true } }),
-          prisma.walletTransaction.aggregate({
-            where: { type: "DEPOSIT", status: "SUCCESS" },
-            _sum: { amount: true },
-          }),
-          prisma.walletTransaction.aggregate({
-            where: { type: "API_CHARGE", status: "SUCCESS" },
-            _sum: { amount: true },
-          }),
-          prisma.apiRequest.count(),
-          prisma.apiRequest.count({ where: { status: "SUCCESSFUL" } }),
-          prisma.apiRequest.count({ where: { status: { in: ["FAILED", "REFUNDED"] } } }),
-          prisma.apiRequest.findMany({
-            orderBy: { createdAt: "desc" },
-            take: 6,
-            include: {
-              user: { select: { name: true, email: true } },
-              apiConfig: { select: { name: true } },
-            },
-          }),
-          prisma.auditLog.findMany({
-            orderBy: { createdAt: "desc" },
-            take: 5,
-            include: {
-              admin: { select: { name: true, email: true } },
-            },
-          }),
-        ]);
+      const [
+        pTotalUsers,
+        pActiveUsers,
+        walletsAggregate,
+        depositsAggregate,
+        pTotalOrders,
+        pSuccessfulOrders,
+        pPendingOrders,
+        pRefundedOrders,
+        pRecentOrders,
+        pRecentAudits,
+      ] = await Promise.all([
+        prisma.user.count(),
+        prisma.user.count({ where: { status: "ACTIVE" } }),
+        prisma.wallet.aggregate({ _sum: { balance: true } }),
+        prisma.payment.aggregate({
+          where: { status: "SUCCESSFUL" },
+          _sum: { amount: true },
+        }),
+        prisma.otpOrder.count(),
+        prisma.otpOrder.count({ where: { status: { in: ["FINISHED", "RECEIVED"] } } }),
+        prisma.otpOrder.count({ where: { status: "PENDING" } }),
+        prisma.otpOrder.count({ where: { isRefunded: true } }),
+        prisma.otpOrder.findMany({
+          orderBy: { createdAt: "desc" },
+          take: 8,
+          include: {
+            user: { select: { name: true, email: true } },
+          },
+        }),
+        prisma.auditLog.findMany({
+          orderBy: { createdAt: "desc" },
+          take: 5,
+          include: {
+            admin: { select: { name: true, email: true } },
+          },
+        }),
+      ]);
 
-        totalUsers = pTotalUsers || totalUsers;
-        activeUsers = pActiveUsers || activeUsers;
-        totalWalletBalance = walletsAggregate._sum.balance ?? totalWalletBalance;
-        totalDeposits = depositsAggregate._sum.amount ?? totalDeposits;
-        totalRevenue = chargesAggregate._sum.amount ?? totalRevenue;
-        totalRequests = pTotalRequests ?? totalRequests;
-        successfulRequests = pSuccessfulRequests ?? successfulRequests;
-        failedRequests = pFailedRequests ?? failedRequests;
-        if (pRecentRequests && pRecentRequests.length > 0) {
-          recentRequests = pRecentRequests.map((r: any) => ({
-            id: r.id,
-            maskedPhone: r.maskedPhone || "Target",
-            status: r.status,
-            amountCharged: Number(r.amountCharged || 0),
-            isRefunded: Boolean(r.isRefunded),
-            latencyMs: Number(r.latencyMs || 0),
-            createdAt: r.createdAt ? r.createdAt.toISOString() : new Date().toISOString(),
-            user: { name: r.user?.name || "Subscriber", email: r.user?.email || "" },
-            apiConfig: { name: r.apiConfig?.name || "Global API" },
-          }));
-        }
-        if (pRecentAudits && pRecentAudits.length > 0) {
-          recentAudits = pRecentAudits.map((a: any) => ({
-            id: a.id,
-            action: a.action,
-            targetType: a.targetType,
-            targetId: a.targetId,
-            createdAt: a.createdAt ? a.createdAt.toISOString() : new Date().toISOString(),
-            admin: { name: a.admin?.name || "System", email: a.admin?.email || "" },
+      if (totalUsers === 0) totalUsers = pTotalUsers;
+      if (activeUsers === 0) activeUsers = pActiveUsers;
+      if (totalWalletBalance === 0) totalWalletBalance = Number((walletsAggregate._sum.balance ?? 0).toFixed(2));
+      if (totalDeposits === 0) totalDeposits = Number((depositsAggregate._sum.amount ?? 0).toFixed(2));
+
+      if (totalOrders === 0 && pTotalOrders > 0) {
+        totalOrders = pTotalOrders;
+        successfulOrders = pSuccessfulOrders;
+        pendingOrders = pPendingOrders;
+        refundedOrders = pRefundedOrders;
+
+        if (pRecentOrders && pRecentOrders.length > 0) {
+          recentOrders = pRecentOrders.map((o) => ({
+            id: o.id,
+            phone: o.phone,
+            serviceName: o.serviceName,
+            countryName: o.countryName,
+            operator: o.operator,
+            status: o.status,
+            cost: o.cost,
+            smsCode: o.smsCode,
+            isRefunded: o.isRefunded,
+            createdAt: o.createdAt.toISOString(),
+            user: { name: o.user.name, email: o.user.email },
           }));
         }
       }
+
+      if (recentAudits.length === 0 && pRecentAudits && pRecentAudits.length > 0) {
+        recentAudits = pRecentAudits.map((a) => ({
+          id: a.id,
+          action: a.action,
+          targetType: a.targetType,
+          targetId: a.targetId,
+          ipAddress: a.ipAddress,
+          createdAt: a.createdAt.toISOString(),
+          admin: { name: a.admin?.name || "System", email: a.admin?.email || "" },
+        }));
+      }
     } catch (prismaErr) {
-      // Prisma missing on serverless - live Firestore data used
+      console.warn("Prisma overview query warning:", prismaErr);
     }
 
     // Assemble 7-day Trend Analytics for Charts
@@ -263,7 +271,7 @@ export async function GET(req: NextRequest) {
     for (const [dayKey, stats] of daysMap.entries()) {
       chartData.push({
         day: dayLabels[idx] || dayKey,
-        requests: stats.requests,
+        orders: stats.orders,
         successful: stats.successful,
         revenue: Number(stats.revenue.toFixed(2)),
         deposits: Number(stats.deposits.toFixed(2)),
@@ -271,17 +279,16 @@ export async function GET(req: NextRequest) {
       idx++;
     }
 
-    // If chartData is all 0, provide current totals on the latest day so charts render nicely
-    if (chartData.length > 0 && chartData.every((c) => c.requests === 0 && c.deposits === 0)) {
-      chartData[chartData.length - 1].requests = totalRequests;
-      chartData[chartData.length - 1].successful = successfulRequests;
+    if (chartData.length > 0 && chartData.every((c) => c.orders === 0 && c.deposits === 0)) {
+      chartData[chartData.length - 1].orders = totalOrders;
+      chartData[chartData.length - 1].successful = successfulOrders;
       chartData[chartData.length - 1].revenue = totalRevenue;
       chartData[chartData.length - 1].deposits = totalDeposits;
     }
 
     const successRate =
-      totalRequests > 0
-        ? Math.round((successfulRequests / totalRequests) * 100)
+      totalOrders > 0
+        ? Math.round((successfulOrders / totalOrders) * 100)
         : 100;
 
     return NextResponse.json({
@@ -291,12 +298,13 @@ export async function GET(req: NextRequest) {
         totalWalletBalance: Number(totalWalletBalance.toFixed(2)),
         totalDeposits: Number(totalDeposits.toFixed(2)),
         totalRevenue: Number(totalRevenue.toFixed(2)),
-        totalRequests,
-        successfulRequests,
-        failedRequests,
+        totalOrders,
+        successfulOrders,
+        pendingOrders,
+        refundedOrders,
         successRate,
       },
-      recentRequests,
+      recentOrders,
       recentAudits,
       chartData,
     });

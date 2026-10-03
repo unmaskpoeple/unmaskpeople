@@ -21,7 +21,7 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const [mounted, setMounted] = useState(false);
 
   useEffect(() => {
-    const saved = localStorage.getItem("unmaskpeople_theme") as Theme;
+    const saved = localStorage.getItem("numverge_theme") as Theme;
     if (saved === "light" || saved === "dark") {
       setTheme(saved);
       document.documentElement.classList.toggle("dark", saved === "dark");
@@ -36,13 +36,13 @@ export function ThemeProvider({ children }: { children: React.ReactNode }) {
   const toggleTheme = () => {
     const next = theme === "dark" ? "light" : "dark";
     setTheme(next);
-    localStorage.setItem("unmaskpeople_theme", next);
+    localStorage.setItem("numverge_theme", next);
     document.documentElement.classList.toggle("dark", next === "dark");
   };
 
   const setExplicitTheme = (t: Theme) => {
     setTheme(t);
-    localStorage.setItem("unmaskpeople_theme", t);
+    localStorage.setItem("numverge_theme", t);
     document.documentElement.classList.toggle("dark", t === "dark");
   };
 

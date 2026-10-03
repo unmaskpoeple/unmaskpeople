@@ -2,121 +2,213 @@
 
 import React from "react";
 import Link from "next/link";
-import { Sparkles, ArrowLeft, ShieldCheck, FileText, Scale } from "lucide-react";
+import {
+  Scale,
+  ShieldAlert,
+  ShieldCheck,
+  ArrowLeft,
+  AlertTriangle,
+  Lock,
+  FileText,
+  Clock,
+  CheckCircle2,
+  Ban,
+  Radio,
+} from "lucide-react";
 import { BrandLogo } from "@/components/brand-logo";
 import { SiteFooter } from "@/components/site-footer";
 
 export default function TermsPage() {
   return (
-    <div className="min-h-screen bg-cyber-mesh text-slate-100 flex flex-col justify-between relative overflow-hidden">
-      <div className="absolute inset-0 bg-cyber-dots pointer-events-none opacity-40 z-0" />
-      <div className="absolute -top-40 -left-40 w-96 h-96 bg-cyan-500/15 rounded-full blur-[128px] pointer-events-none z-0" />
-      <div className="absolute -top-40 -right-40 w-96 h-96 bg-indigo-500/15 rounded-full blur-[128px] pointer-events-none z-0" />
+    <div className="min-h-screen bg-[#030712] text-slate-100 flex flex-col justify-between relative selection:bg-cyan-500/30 selection:text-cyan-200">
+      {/* Background Glow */}
+      <div className="fixed inset-0 pointer-events-none z-0">
+        <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[800px] h-[400px] bg-gradient-to-b from-cyan-600/10 via-indigo-600/5 to-transparent blur-3xl rounded-full" />
+      </div>
 
       {/* Header */}
-      <header className="relative z-40 bg-slate-950/70 backdrop-blur-2xl border-b border-slate-800/80">
-        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-20 flex items-center justify-between">
-          <BrandLogo href="/" size="md" />
+      <header className="relative z-40 bg-slate-950/80 backdrop-blur-xl border-b border-slate-800/80">
+        <div className="max-w-6xl mx-auto px-4 sm:px-6 h-16 flex items-center justify-between">
+          <BrandLogo href="/" size="sm" />
 
           <Link
             href="/"
-            className="inline-flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-cyan-400 bg-slate-900/60 border border-slate-800 px-3.5 py-2 rounded-xl backdrop-blur-xl transition-colors"
+            className="inline-flex items-center gap-2 text-xs font-bold text-slate-300 hover:text-cyan-400 bg-slate-900 border border-slate-800 px-3.5 py-1.5 rounded-xl transition"
           >
             <ArrowLeft className="w-3.5 h-3.5" />
-            <span>Back to Home</span>
+            <span>Back to Store</span>
           </Link>
         </div>
       </header>
 
-      {/* Content */}
-      <main className="relative z-10 flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-12 sm:py-16">
+      {/* Main Content */}
+      <main className="relative z-10 flex-1 max-w-4xl w-full mx-auto px-4 sm:px-6 py-12">
         <div className="space-y-4 mb-10 text-center sm:text-left">
-          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-950/80 text-cyan-400 border border-cyan-800/60 text-xs font-bold">
-            <Scale className="w-3.5 h-3.5" />
-            <span>Legal Agreement</span>
+          <div className="inline-flex items-center gap-2 px-3 py-1 rounded-full bg-cyan-950/80 text-cyan-300 border border-cyan-500/30 text-xs font-bold">
+            <Scale className="w-3.5 h-3.5 text-cyan-400" />
+            <span>Binding Regulatory & User Agreement</span>
           </div>
-          <h1 className="text-3xl sm:text-5xl font-black tracking-tight">
-            <span className="gradient-letter">Terms and</span>{" "}
-            <span className="gradient-letter-cyan">Conditions</span>
+
+          <h1 className="text-3xl sm:text-5xl font-black tracking-tight text-white">
+            Terms of Service &{" "}
+            <span className="bg-gradient-to-r from-cyan-400 via-sky-400 to-indigo-400 bg-clip-text text-transparent">
+              Acceptable Use Policy (AUP)
+            </span>
           </h1>
+
           <p className="text-xs sm:text-sm text-slate-400">
-            Last updated: September 2026 • Effective immediately across all UnMaskPeople.in digital services
+            Last updated: October 2026 • Strict Enforcement of Intermediary Safe-Harbor & Cyber Safeguards
           </p>
         </div>
 
-        <div className="p-8 sm:p-10 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-2xl backdrop-blur-2xl space-y-8 text-xs sm:text-sm text-slate-300 leading-relaxed">
-          <section className="space-y-3">
-            <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-              1. Acceptance of Terms
-            </h2>
-            <p>
-              By accessing, registering with, or utilizing the services provided by <strong>UnMaskPeople.in</strong> ("Platform", "we", "us", or "our"), you agree to be bound by these Terms and Conditions and our Privacy Policy. If you do not agree to these terms, you must discontinue using our services immediately.
+        <div className="p-6 sm:p-10 rounded-3xl bg-slate-900/80 border border-slate-800 shadow-2xl backdrop-blur-xl space-y-8 text-xs sm:text-sm text-slate-300 leading-relaxed">
+          {/* CRITICAL INTERMEDIARY DISCLAIMER BANNER */}
+          <div className="p-5 rounded-2xl bg-cyan-950/40 border border-cyan-500/50 space-y-2">
+            <div className="flex items-center gap-2 font-bold text-cyan-300 text-sm">
+              <Radio className="w-4 h-4 text-cyan-400" />
+              <span>Statutory Intermediary Notice & Safe Harbor Disclaimer</span>
+            </div>
+            <p className="text-xs text-slate-200 leading-relaxed font-medium">
+              "NumVerge OTP is a technology intermediary and communications aggregator. We do not endorse, promote, or tolerate the misuse of communication channels for illicit activities."
             </p>
-          </section>
+            <p className="text-[11px] text-slate-400">
+              The Platform acts strictly as a technical conduit under Section 79 of the Information Technology Act, 2000 and international safe-harbor frameworks. We operate with zero-tolerance toward fraudulent exploitation.
+            </p>
+          </div>
 
+          {/* SECTION 1: PERMISSIBLE PURPOSE */}
           <section className="space-y-3">
             <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-              2. Scope of Services & Informational Nature
+              <CheckCircle2 className="w-5 h-5 text-emerald-400" />
+              <span>1. Permissible Scope of Use</span>
             </h2>
             <p>
-              UnMaskPeople.in provides an enterprise SaaS lookup platform designed to assist developers, organizations, and verified individuals in retrieving technical carrier routing telemetry (HLR/MNP), public vehicle registry data (Vahan/RC), and cryptographic identity status checks.
+              NumVerge OTP provides temporary telecommunication routing and SMS verification reception solely for the following legitimate purposes:
             </p>
-            <p>
-              All queries are aggregated through authorized telecom carriers, public data registries, and compliant third-party gateways. UnMaskPeople.in acts solely as an intermediary data routing platform and does not maintain secret or unauthorized surveillance records.
-            </p>
-          </section>
-
-          <section className="space-y-3">
-            <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-              3. Permissible & Prohibited Use
-            </h2>
-            <p>
-              You represent and warrant that you will use UnMaskPeople.in only for lawful purposes in compliance with all applicable Indian and international laws, including the Information Technology Act, 2000 and the Digital Personal Data Protection Act, 2023.
-            </p>
-            <ul className="list-disc pl-5 space-y-1.5 text-slate-400">
-              <li>You shall not use the service for stalking, harassment, intimidation, or unauthorized tracking.</li>
-              <li>You shall not attempt to reverse-engineer, decompile, or launch automated scraping botnets against the Platform.</li>
-              <li>You shall not submit queries relating to minors or prohibited government personnel.</li>
-              <li>Violation of these restrictions will result in immediate termination of the user account and forfeiture of wallet balances.</li>
+            <ul className="list-disc pl-5 space-y-2 text-slate-300">
+              <li>
+                <strong>Software & Application Testing:</strong> Developers, QA engineers, and cybersecurity researchers conducting functional automated testing of SMS delivery gateways and verification workflows.
+              </li>
+              <li>
+                <strong>Personal Privacy Protection:</strong> Safeguarding personal telephone numbers from unsolicited telemarketing spam, public data brokers, and non-essential web forums.
+              </li>
+              <li>
+                <strong>Legitimate Consumer Verifications:</strong> Lawful secondary account creation on supported third-party consumer web platforms.
+              </li>
             </ul>
           </section>
 
-          <section className="space-y-3">
-            <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-              4. Prepaid Wallet & Payment Processing
+          {/* SECTION 2: ACCEPTABLE USE POLICY & STRICT PROHIBITIONS */}
+          <section className="space-y-4">
+            <h2 className="text-base sm:text-lg font-bold text-rose-400 flex items-center gap-2">
+              <Ban className="w-5 h-5 text-rose-400" />
+              <span>2. Strictly Prohibited Activities (Acceptable Use Policy)</span>
             </h2>
             <p>
-              UnMaskPeople.in operates on an atomic prepaid wallet model. Subscribers top up funds through our authorized payment aggregator, <strong>Razorpay</strong>, using UPI, Credit/Debit Cards, or NetBanking.
+              Users are strictly prohibited from using NumVerge OTP numbers for any of the following unauthorized or unlawful activities:
             </p>
-            <p>
-              Usage charges are deducted on a per-query basis upon successful execution. In the event an upstream provider fails to resolve a query, our automated failure refund mechanism instantly credits the reserved amount back to your prepaid wallet balance.
+
+            <div className="grid grid-cols-1 md:grid-cols-2 gap-3 text-xs">
+              <div className="p-3.5 rounded-xl bg-rose-950/20 border border-rose-800/40 space-y-1">
+                <strong className="text-rose-300 flex items-center gap-1.5">
+                  <ShieldAlert className="w-3.5 h-3.5" />
+                  Banking & Financial OTPs
+                </strong>
+                <p className="text-slate-400">
+                  Strictly forbidden for banking portals, credit cards, payment gateways (UPI, Paytm, PhonePe, PayPal), money transfer apps, or loan platforms.
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-rose-950/20 border border-rose-800/40 space-y-1">
+                <strong className="text-rose-300 flex items-center gap-1.5">
+                  <ShieldAlert className="w-3.5 h-3.5" />
+                  Government & Identity Portals
+                </strong>
+                <p className="text-slate-400">
+                  Strictly forbidden for Aadhaar, passports, tax departments (IRS/ITD), social security, public registries, or law enforcement portals.
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-rose-950/20 border border-rose-800/40 space-y-1">
+                <strong className="text-rose-300 flex items-center gap-1.5">
+                  <ShieldAlert className="w-3.5 h-3.5" />
+                  Fraud, Phishing & Impersonation
+                </strong>
+                <p className="text-slate-400">
+                  Creating accounts for deceptive practices, fake profiles, identity theft, financial scamming, blackmail, or unlawful marketing campaigns.
+                </p>
+              </div>
+
+              <div className="p-3.5 rounded-xl bg-rose-950/20 border border-rose-800/40 space-y-1">
+                <strong className="text-rose-300 flex items-center gap-1.5">
+                  <ShieldAlert className="w-3.5 h-3.5" />
+                  Botnets & Abuse
+                </strong>
+                <p className="text-slate-400">
+                  Automated scraping, denial-of-service, mass registration for black-hat spamming, or circumventing platform security mechanisms.
+                </p>
+              </div>
+            </div>
+          </section>
+
+          {/* SECTION 3: PENALTY CLAUSE */}
+          <section className="space-y-3 p-5 rounded-2xl bg-rose-950/30 border border-rose-700/60">
+            <h2 className="text-sm sm:text-base font-black text-rose-300 flex items-center gap-2">
+              <AlertTriangle className="w-4 h-4 text-rose-400" />
+              <span>3. Zero-Tolerance Violation & Permanent Forfeiture Policy</span>
+            </h2>
+            <p className="text-xs text-rose-100/90 leading-relaxed font-medium">
+              Any fraudulent, illegal, abusive, or unauthorized behavior detected will result in an <strong>immediate, permanent ban of the user account without prior notice</strong>, complete termination of access, and <strong>immediate forfeiture of all remaining prepaid wallet balances without eligibility for any refund</strong>.
+            </p>
+            <p className="text-[11px] text-slate-400">
+              The Platform reserves the right to report unlawful activities, associated IP logs, and telemetry directly to the competent cyber police and statutory authorities.
             </p>
           </section>
 
+          {/* SECTION 4: ACTIVITY LOGGING & LAW ENFORCEMENT */}
           <section className="space-y-3">
             <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-              5. Limitation of Liability
+              <Lock className="w-5 h-5 text-indigo-400" />
+              <span>4. Logging of User Activity & Regulatory Compliance</span>
             </h2>
             <p>
-              While UnMaskPeople.in strives for 99.9% uptime and high accuracy, services are provided on an "as is" and "as available" basis. To the maximum extent permitted by Indian law, UnMaskPeople.in and its operators shall not be liable for indirect, incidental, or consequential damages resulting from upstream carrier network delays, telecom downtime, or incorrect external registry entries.
+              In full adherence to intermediary guidelines and statutory cybersecurity mandates:
+            </p>
+            <ul className="list-disc pl-5 space-y-1.5 text-slate-300 text-xs">
+              <li>
+                <strong>Technical Telemetry:</strong> We record and store client IP addresses, browser user agents, query timestamps, carrier order identifiers, and payment transaction references (including 12-digit UPI UTR numbers and gateway identifiers).
+              </li>
+              <li>
+                <strong>Data Retention:</strong> Audit logs are preserved for compliance and fraud-prevention purposes.
+              </li>
+              <li>
+                <strong>Cooperation with Law Enforcement:</strong> Upon receiving lawful notices, court orders, or statutory cyber cell inquiries from authorized governmental agencies, NumVerge OTP cooperates fully and furnishes relevant audit logs in accordance with intermediary safe-harbor standards.
+              </li>
+            </ul>
+          </section>
+
+          {/* SECTION 5: PREPAID WALLET & REFUNDS */}
+          <section className="space-y-3">
+            <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
+              <Clock className="w-5 h-5 text-cyan-400" />
+              <span>5. Prepaid Wallet, Payments & Automated Refunds</span>
+            </h2>
+            <p>
+              The Platform operates on a prepaid balance system. Wallet top-ups are completed via UPI QR code payments with mandatory 12-digit Unique Transaction Reference (UTR) verification.
+            </p>
+            <p>
+              <strong>100% Automated Failure Guarantee:</strong> If an allocated virtual number does not receive an incoming SMS code within the 20-minute validity window, or if the order is cancelled prior to SMS arrival, the full purchase price is instantly refunded to your internal wallet balance.
             </p>
           </section>
 
+          {/* SECTION 6: LIMITATION OF LIABILITY */}
           <section className="space-y-3">
             <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-              6. Governing Law & Dispute Resolution
+              <FileText className="w-5 h-5 text-slate-400" />
+              <span>6. Disclaimer & Limitation of Liability</span>
             </h2>
             <p>
-              These Terms shall be governed by and construed in accordance with the laws of the Republic of India. Any disputes arising out of or in connection with these Terms shall be subject to the exclusive jurisdiction of the competent courts in India.
-            </p>
-          </section>
-
-          <section className="space-y-3 pt-4 border-t border-slate-800">
-            <h2 className="text-base sm:text-lg font-bold text-white">
-              7. Contact Information
-            </h2>
-            <p>
-              For legal inquiries, dispute resolution, or contractual questions, please reach out to our legal department at <code className="text-cyan-400">legal@unmaskpeople.in</code> or visit our <Link href="/contact" className="text-cyan-400 hover:underline">Contact Page</Link>.
+              NumVerge OTP does not guarantee that third-party platforms will indefinitely maintain accounts registered using virtual numbers. Upstream carrier routing availability is subject to telecom network variations. In no event shall the Platform or its operators be liable for indirect, consequential, or third-party platform actions resulting from the user's voluntary activities.
             </p>
           </section>
         </div>

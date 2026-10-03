@@ -25,7 +25,7 @@ export default function AdminSettingsPage() {
   const [saving, setSaving] = useState(false);
 
   // Form Fields
-  const [siteName, setSiteName] = useState("UnMaskPeople.in");
+  const [siteName, setSiteName] = useState("NumVerge OTP");
   const [currencySymbol, setCurrencySymbol] = useState("₹");
   const [currencyCode, setCurrencyCode] = useState("INR");
   const [maintenanceMode, setMaintenanceMode] = useState(false);
@@ -44,7 +44,7 @@ export default function AdminSettingsPage() {
         const data = await res.json();
         const s = data.settings;
         setSettings(s);
-        setSiteName(s.site_name || "UnMaskPeople.in");
+        setSiteName(s.site_name || "NumVerge OTP");
         setCurrencySymbol(s.currency_symbol || "₹");
         setCurrencyCode(s.currency_code || "INR");
         setMaintenanceMode(s.maintenance_mode || false);

@@ -142,6 +142,19 @@ export default function AdminOverviewPage() {
           </Link>
 
           <Link
+            href="/admin/gateway-settings"
+            className="p-3 rounded-2xl bg-cyan-950/40 border border-cyan-800/60 hover:border-cyan-400 hover:bg-cyan-950/70 transition-all flex items-center gap-2.5 group"
+          >
+            <div className="w-8 h-8 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center group-hover:scale-105 transition-transform">
+              <Cpu className="w-4 h-4" />
+            </div>
+            <div className="truncate">
+              <span className="text-xs font-bold text-cyan-300 block truncate">Carrier Gateway</span>
+              <span className="text-[10px] text-slate-400">Balance &amp; Pricing</span>
+            </div>
+          </Link>
+
+          <Link
             href="/admin/users"
             className="p-3 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-violet-500/50 hover:bg-slate-900 transition-all flex items-center gap-2.5 group"
           >
@@ -162,34 +175,8 @@ export default function AdminOverviewPage() {
               <Activity className="w-4 h-4" />
             </div>
             <div className="truncate">
-              <span className="text-xs font-bold text-slate-200 block truncate">Traffic Logs</span>
-              <span className="text-[10px] text-slate-400">Live Lookups</span>
-            </div>
-          </Link>
-
-          <Link
-            href="/admin/apis"
-            className="p-3 rounded-2xl bg-slate-900/80 border border-slate-800 hover:border-violet-500/50 hover:bg-slate-900 transition-all flex items-center gap-2.5 group"
-          >
-            <div className="w-8 h-8 rounded-xl bg-amber-500/10 text-amber-400 flex items-center justify-center group-hover:scale-105 transition-transform">
-              <Cpu className="w-4 h-4" />
-            </div>
-            <div className="truncate">
-              <span className="text-xs font-bold text-slate-200 block truncate">API Providers</span>
-              <span className="text-[10px] text-slate-400">Configure & test</span>
-            </div>
-          </Link>
-
-          <Link
-            href="/admin/fivesim"
-            className="p-3 rounded-2xl bg-cyan-950/40 border border-cyan-800/60 hover:border-cyan-400 hover:bg-cyan-950/70 transition-all flex items-center gap-2.5 group"
-          >
-            <div className="w-8 h-8 rounded-xl bg-cyan-500/20 text-cyan-400 flex items-center justify-center group-hover:scale-105 transition-transform">
-              <Shield className="w-4 h-4" />
-            </div>
-            <div className="truncate">
-              <span className="text-xs font-bold text-cyan-300 block truncate">5SIM Protocol</span>
-              <span className="text-[10px] text-slate-400">Balance & Pricing</span>
+              <span className="text-xs font-bold text-slate-200 block truncate">OTP Orders</span>
+              <span className="text-[10px] text-slate-400">SMS Telemetry</span>
             </div>
           </Link>
 
@@ -202,7 +189,7 @@ export default function AdminOverviewPage() {
             </div>
             <div className="truncate">
               <span className="text-xs font-bold text-slate-200 block truncate">Platform Policy</span>
-              <span className="text-[10px] text-slate-400">Pricing & maintenance</span>
+              <span className="text-[10px] text-slate-400">Pricing & markup</span>
             </div>
           </Link>
         </div>
@@ -213,7 +200,7 @@ export default function AdminOverviewPage() {
           <div className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-xl relative overflow-hidden">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                Total API Revenue
+                Total OTP Revenue
               </span>
               <div className="w-9 h-9 rounded-xl bg-emerald-500/10 text-emerald-400 flex items-center justify-center">
                 <BadgeDollarSign className="w-5 h-5" />
@@ -225,7 +212,7 @@ export default function AdminOverviewPage() {
               </span>
             </div>
             <div className="mt-3 flex items-center justify-between text-xs text-slate-400">
-              <span>Earned from lookups</span>
+              <span>Fulfilled orders</span>
               <span className="text-emerald-400 font-semibold">Active Ledger</span>
             </div>
           </div>
@@ -246,8 +233,8 @@ export default function AdminOverviewPage() {
               </span>
             </div>
             <div className="mt-3 flex items-center justify-between text-xs text-slate-400">
-              <span>Recharge transactions</span>
-              <span className="text-indigo-400 font-semibold">Verified webhook</span>
+              <span>UPI Recharges</span>
+              <span className="text-indigo-400 font-semibold">Verified UTR</span>
             </div>
           </div>
 
@@ -272,11 +259,11 @@ export default function AdminOverviewPage() {
             </div>
           </div>
 
-          {/* Total Query Volume */}
+          {/* Total Order Volume */}
           <div className="p-5 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-xl relative overflow-hidden">
             <div className="flex items-center justify-between">
               <span className="text-xs font-bold text-slate-400 uppercase tracking-wider">
-                Total API Requests
+                Total OTP Orders
               </span>
               <div className="w-9 h-9 rounded-xl bg-sky-500/10 text-sky-400 flex items-center justify-center">
                 <Activity className="w-5 h-5" />
@@ -284,24 +271,24 @@ export default function AdminOverviewPage() {
             </div>
             <div className="mt-3">
               <span className="text-3xl font-extrabold text-white">
-                {stats?.totalRequests ?? (loading ? "..." : 0)}
+                {stats?.totalOrders ?? (loading ? "..." : 0)}
               </span>
             </div>
             <div className="mt-3 flex items-center justify-between text-xs text-slate-400">
-              <span className="text-emerald-400 font-bold">{stats?.successRate ?? 100}% Success</span>
-              <span>{stats?.failedRequests ?? 0} Fail/Refund</span>
+              <span className="text-emerald-400 font-bold">{stats?.successRate ?? 100}% Delivered</span>
+              <span>{stats?.refundedOrders ?? 0} Refund/Expired</span>
             </div>
           </div>
         </div>
 
         {/* Charts Section: Requests & Revenue Trends */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Chart 1: Requests & Success Rate */}
+          {/* Chart 1: OTP Orders & Success Rate */}
           <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-xl">
             <div className="flex items-center justify-between mb-4">
               <div>
-                <h3 className="font-bold text-white text-base">API Request Volume (7 Days)</h3>
-                <p className="text-xs text-slate-400">Comparison of total vs successful telephone lookups</p>
+                <h3 className="font-bold text-white text-base">OTP Order Volume (7 Days)</h3>
+                <p className="text-xs text-slate-400">Total number allocations vs successfully delivered verification codes</p>
               </div>
               <button
                 onClick={fetchOverview}
@@ -318,8 +305,8 @@ export default function AdminOverviewPage() {
                   <AreaChart data={data.chartData} margin={{ top: 10, right: 10, left: -20, bottom: 0 }}>
                     <defs>
                       <linearGradient id="adminReqGradient" x1="0" y1="0" x2="0" y2="1">
-                        <stop offset="5%" stopColor="#8b5cf6" stopOpacity={0.4} />
-                        <stop offset="95%" stopColor="#8b5cf6" stopOpacity={0.0} />
+                        <stop offset="5%" stopColor="#06b6d4" stopOpacity={0.4} />
+                        <stop offset="95%" stopColor="#06b6d4" stopOpacity={0.0} />
                       </linearGradient>
                       <linearGradient id="adminSuccessGradient" x1="0" y1="0" x2="0" y2="1">
                         <stop offset="5%" stopColor="#10b981" stopOpacity={0.4} />
@@ -340,16 +327,16 @@ export default function AdminOverviewPage() {
                     <Legend wrapperStyle={{ fontSize: "11px", paddingTop: "8px" }} />
                     <Area
                       type="monotone"
-                      name="Total Queries"
-                      dataKey="requests"
-                      stroke="#8b5cf6"
+                      name="Total Orders"
+                      dataKey="orders"
+                      stroke="#06b6d4"
                       strokeWidth={2.5}
                       fillOpacity={1}
                       fill="url(#adminReqGradient)"
                     />
                     <Area
                       type="monotone"
-                      name="Successful"
+                      name="Delivered OTPs"
                       dataKey="successful"
                       stroke="#10b981"
                       strokeWidth={2}
@@ -360,7 +347,7 @@ export default function AdminOverviewPage() {
                 </ResponsiveContainer>
               ) : (
                 <div className="h-full flex items-center justify-center text-xs text-slate-500">
-                  {loading ? "Loading telemetry trends..." : "No search trend data available yet."}
+                  {loading ? "Loading telemetry trends..." : "No order trend data available yet."}
                 </div>
               )}
             </div>
@@ -407,15 +394,15 @@ export default function AdminOverviewPage() {
           </div>
         </div>
 
-        {/* Operational Feeds: Live API Logs & Security Audits */}
+        {/* Operational Feeds: Live OTP Orders & Security Audits */}
         <div className="grid grid-cols-1 lg:grid-cols-2 gap-6">
-          {/* Recent API Requests */}
+          {/* Recent OTP Orders */}
           <div className="p-6 rounded-3xl bg-slate-900/90 border border-slate-800 shadow-xl">
             <div className="flex items-center justify-between mb-4">
-              <h3 className="font-bold text-white text-base">Latest Operational API Traffic</h3>
+              <h3 className="font-bold text-white text-base">Latest OTP Activations & Codes</h3>
               <Link
                 href="/admin/logs"
-                className="text-xs text-violet-400 hover:text-violet-300 font-semibold flex items-center gap-1"
+                className="text-xs text-cyan-400 hover:text-cyan-300 font-semibold flex items-center gap-1"
               >
                 <span>View all logs</span>
                 <ArrowRight className="w-3 h-3" />
@@ -423,45 +410,52 @@ export default function AdminOverviewPage() {
             </div>
 
             <div className="space-y-2.5">
-              {data?.recentRequests && data.recentRequests.length > 0 ? (
-                data.recentRequests.map((req: any) => (
+              {data?.recentOrders && data.recentOrders.length > 0 ? (
+                data.recentOrders.map((ord: any) => (
                   <div
-                    key={req.id}
+                    key={ord.id}
                     className="p-3.5 rounded-xl bg-slate-950 border border-slate-800/80 flex items-center justify-between gap-3 text-xs"
                   >
                     <div>
                       <div className="flex items-center gap-2">
                         <span className="font-mono font-bold text-slate-200">
-                          {req.maskedPhone}
+                          {ord.phone || "Allocating Number..."}
                         </span>
                         <span
                           className={`text-[10px] px-1.5 py-0.5 rounded font-bold ${
-                            req.status === "SUCCESSFUL"
+                            ord.status === "RECEIVED" || ord.status === "FINISHED"
                               ? "bg-emerald-500/10 text-emerald-400"
+                              : ord.status === "PENDING"
+                              ? "bg-amber-500/10 text-amber-400"
                               : "bg-rose-500/10 text-rose-400"
                           }`}
                         >
-                          {req.status}
+                          {ord.status}
                         </span>
+                        {ord.smsCode && (
+                          <span className="font-mono font-black text-emerald-400 bg-emerald-950 px-1.5 py-0.5 rounded text-[11px] border border-emerald-500/40">
+                            {ord.smsCode}
+                          </span>
+                        )}
                       </div>
                       <p className="text-[11px] text-slate-500 mt-0.5">
-                        By {req.user?.name || "Subscriber"} • {req.apiConfig?.name || "Core Telecom API"}
+                        {ord.serviceName} ({ord.countryName}) • By {ord.user?.name || ord.user?.email || "Subscriber"}
                       </p>
                     </div>
 
                     <div className="text-right">
                       <p className="font-mono font-bold text-white">
-                        {req.isRefunded ? "₹0.00" : `₹${formatCurrency(req.amountCharged)}`}
+                        {ord.isRefunded ? "₹0.00" : `₹${formatCurrency(ord.cost)}`}
                       </p>
-                      <p className="text-[10px] text-slate-500">
-                        {req.latencyMs ? `${req.latencyMs}ms` : "-"}
+                      <p className="text-[10px] text-slate-500 font-mono">
+                        {formatTime(ord.createdAt)}
                       </p>
                     </div>
                   </div>
                 ))
               ) : (
                 <div className="py-8 text-center text-slate-500 text-xs">
-                  {loading ? "Loading operational requests..." : "No requests logged yet."}
+                  {loading ? "Loading operational orders..." : "No orders logged yet."}
                 </div>
               )}
             </div>

@@ -150,7 +150,7 @@ function VerifyEmailContent() {
           <div className="space-y-2">
             <h2 className="text-2xl font-black gradient-letter">Account Verified!</h2>
             <p className="text-xs text-slate-400 leading-relaxed">
-              Your email address has been confirmed and your UnMaskPeople.in account is officially active.
+              Your email address has been confirmed and your NumVerge OTP account is officially active.
             </p>
           </div>
 
@@ -160,7 +160,7 @@ function VerifyEmailContent() {
             </div>
             <div>
               <p className="text-xs font-bold text-white">₹15.00 Welcome Credit Active</p>
-              <p className="text-[11px] text-emerald-400/80">Available now for phone, vehicle, or aadhar lookups.</p>
+              <p className="text-[11px] text-emerald-400/80">Available now for virtual numbers and SMS verification.</p>
             </div>
           </div>
 
@@ -369,7 +369,7 @@ export default function VerifyEmailPage() {
       </main>
 
       <footer className="relative z-10 border-t border-slate-800/80 py-6 text-center text-xs text-slate-500">
-        <p>© 2026 UnMaskPeople.in Telecom Intelligence. All rights reserved.</p>
+        <p>© 2026 NumVerge OTP Verification Platform. All rights reserved.</p>
       </footer>
     </div>
   );

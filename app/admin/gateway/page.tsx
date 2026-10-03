@@ -173,7 +173,7 @@ export default function AdminGatewayPage() {
 
   // Preview QR Code
   const previewUri = `upi://pay?pa=${encodeURIComponent(upiId || "yourname@upi")}&pn=${encodeURIComponent(
-    upiPayeeName || "UnMaskPeople"
+    upiPayeeName || "NumVerge OTP"
   )}&am=100&cu=INR&tn=Wallet%20Topup`;
   const dynamicPreviewQr = `https://api.qrserver.com/v1/create-qr-code/?size=200x200&margin=8&data=${encodeURIComponent(
     previewUri
@@ -323,7 +323,7 @@ export default function AdminGatewayPage() {
                       type="text"
                       value={upiPayeeName}
                       onChange={(e) => setUpiPayeeName(e.target.value)}
-                      placeholder="e.g. UnMaskPeople or Your Full Name"
+                      placeholder="e.g. NumVerge OTP or Your Business Name"
                       className="w-full px-4 py-3 rounded-xl border border-slate-800 bg-slate-950 text-white text-sm focus:border-emerald-400 outline-none"
                     />
                   </div>
@@ -403,7 +403,7 @@ export default function AdminGatewayPage() {
                   {upiId || "No UPI ID set yet"}
                 </p>
                 <p className="text-[10px] text-slate-400 mt-1">
-                  Payee: <span className="text-white font-bold">{upiPayeeName || "UnMaskPeople"}</span>
+                  Payee: <span className="text-white font-bold">{upiPayeeName || "NumVerge OTP"}</span>
                 </p>
               </div>
 

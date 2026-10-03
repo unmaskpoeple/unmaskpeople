@@ -3,6 +3,9 @@ import { getSessionUser } from "@/lib/jwt";
 import { FiveSimService } from "@/services/fivesim.service";
 import { WalletService } from "@/services/wallet.service";
 import prisma from "@/lib/prisma";
+import { db } from "@/lib/firebase";
+import { FS_COLLECTIONS } from "@/lib/collections";
+import { doc, updateDoc, setDoc } from "firebase/firestore";
 
 export const dynamic = "force-dynamic";
 
@@ -53,13 +56,13 @@ export async function GET(req: NextRequest) {
       });
     }
 
-    // 2. Poll 5SIM for live order update
+    // 2. Poll carrier gateway for live order update
     try {
-      const fiveSimData = await FiveSimService.checkOrder(order.fiveSimId);
+      const carrierData = await FiveSimService.checkOrder(order.fiveSimId);
 
       // Check for incoming SMS messages
-      if (fiveSimData.sms && fiveSimData.sms.length > 0) {
-        const latestSms = fiveSimData.sms[fiveSimData.sms.length - 1];
+      if (carrierData.sms && carrierData.sms.length > 0) {
+        const latestSms = carrierData.sms[carrierData.sms.length - 1];
         let code = latestSms.code;
 
         // If code is not explicitly set, extract 4-8 digits from text
@@ -79,6 +82,26 @@ export async function GET(req: NextRequest) {
           },
         });
 
+        // Sync SMS code to Cloud Firestore
+        if (db) {
+          try {
+            await setDoc(
+              doc(db, FS_COLLECTIONS.OTP_ORDERS, String(order.fiveSimId)),
+              {
+                status: "RECEIVED",
+                smsCode: code || null,
+                smsText: latestSms.text || null,
+                smsSender: latestSms.sender || null,
+                smsReceivedAt: new Date().toISOString(),
+                updatedAt: new Date().toISOString(),
+              },
+              { merge: true }
+            );
+          } catch (e) {
+            console.warn("Firestore sync error on check:", e);
+          }
+        }
+
         return NextResponse.json({
           success: true,
           order,
@@ -86,9 +109,9 @@ export async function GET(req: NextRequest) {
         });
       }
 
-      // Check if 5SIM marked order as CANCELED or TIMEOUT
+      // Check if carrier marked order as CANCELED or TIMEOUT
       const isExpired = new Date() > new Date(order.expiresAt);
-      if ((fiveSimData.status === "CANCELED" || fiveSimData.status === "TIMEOUT" || isExpired) && !order.isRefunded) {
+      if ((carrierData.status === "CANCELED" || carrierData.status === "TIMEOUT" || isExpired) && !order.isRefunded) {
         // Auto-refund user's wallet!
         await WalletService.refundForFailedRequest({
           userId: order.userId,
@@ -105,6 +128,21 @@ export async function GET(req: NextRequest) {
           },
         });
 
+        // Sync TIMEOUT to Cloud Firestore
+        if (db) {
+          try {
+            await setDoc(
+              doc(db, FS_COLLECTIONS.OTP_ORDERS, String(order.fiveSimId)),
+              {
+                status: "TIMEOUT",
+                isRefunded: true,
+                updatedAt: new Date().toISOString(),
+              },
+              { merge: true }
+            );
+          } catch (e) {}
+        }
+
         return NextResponse.json({
           success: true,
           order,
@@ -116,11 +154,11 @@ export async function GET(req: NextRequest) {
         success: true,
         order: {
           ...order,
-          fiveSimStatus: fiveSimData.status,
+          carrierStatus: carrierData.status,
         },
       });
     } catch (checkErr: any) {
-      console.warn(`5SIM poll check error for order ${order.fiveSimId}:`, checkErr.message);
+      console.warn(`Carrier poll error for order ${order.fiveSimId}:`, checkErr.message);
       return NextResponse.json({
         success: true,
         order,

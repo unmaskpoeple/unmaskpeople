@@ -74,7 +74,7 @@ export default function ReferPage() {
 
   const handleShareWhatsapp = () => {
     const text = encodeURIComponent(
-      `Join UnMaskPeople.in Intelligence with my invite code *${referralCode}* to get ₹15.00 FREE welcome credits! Verify phone carriers, RC vehicle records & Aadhar numbers: ${referralLink}`
+      `Join NumVerge OTP with my invite code *${referralCode}* to get ₹15.00 FREE welcome credits! Receive instant SMS OTPs & virtual numbers: ${referralLink}`
     );
     window.open(`https://api.whatsapp.com/send?text=${text}`, "_blank");
   };
@@ -230,8 +230,8 @@ export default function ReferPage() {
 
               <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-1.5">
                 <span className="w-6 h-6 rounded-full bg-amber-950 text-amber-400 border border-amber-800 text-xs font-black flex items-center justify-center">3</span>
-                <h3 className="font-bold text-white">2 Successful Searches</h3>
-                <p className="text-slate-400 text-[11px]">Friend performs 2 successful lookups (Phone, RC, or UIDAI).</p>
+                <h3 className="font-bold text-white">1st OTP Activation</h3>
+                <p className="text-slate-400 text-[11px]">Friend completes their first virtual number SMS verification.</p>
               </div>
 
               <div className="p-4 rounded-2xl bg-slate-900/80 border border-slate-800 space-y-1.5">

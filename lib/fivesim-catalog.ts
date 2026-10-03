@@ -1,5 +1,5 @@
 /**
- * Curated 5SIM Services and Countries Directory
+ * Curated Virtual Number Services and Countries Directory
  * Contains categorized popular services, display names, badge colors, and helpers.
  */
 

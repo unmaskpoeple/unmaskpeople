@@ -21,12 +21,13 @@ export async function GET(req: NextRequest) {
     let userStatus = "ACTIVE";
     let foundInFirestore = false;
 
-    // 1. Primary: Fetch live balance directly from Cloud Firestore (Online database)
+    // 1. Primary: Fetch live balance directly from Cloud Firestore (Online database - namespaced)
     if (db) {
       try {
+        const { FS_COLLECTIONS } = await import("@/lib/collections");
         let userSnap = null;
         if (sessionUser.id) {
-          userSnap = await getDoc(doc(db, "users", sessionUser.id));
+          userSnap = await getDoc(doc(db, FS_COLLECTIONS.USERS, sessionUser.id));
         }
 
         if (userSnap && userSnap.exists()) {
@@ -39,7 +40,7 @@ export async function GET(req: NextRequest) {
         } else if (sessionUser.email) {
           // If doc ID was not matched directly, find by email in Firestore
           const cleanEmail = sessionUser.email.trim().toLowerCase();
-          const q = query(collection(db, "users"), where("email", "==", cleanEmail));
+          const q = query(collection(db, FS_COLLECTIONS.USERS), where("email", "==", cleanEmail));
           const qSnap = await getDocs(q);
           if (!qSnap.empty) {
             const data = qSnap.docs[0].data();

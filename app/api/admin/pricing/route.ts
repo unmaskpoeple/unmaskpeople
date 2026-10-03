@@ -65,11 +65,30 @@ export async function POST(req: NextRequest) {
       );
     }
 
+    // 1. Save to Cloud Firestore (Primary online source of truth - strictly namespaced)
+    try {
+      const { db } = await import("@/lib/firebase");
+      const { FS_COLLECTIONS } = await import("@/lib/collections");
+      if (db) {
+        const { doc, setDoc } = await import("firebase/firestore");
+        const fsUpdates: any = {};
+        if (markupPercent !== undefined && !isNaN(Number(markupPercent))) fsUpdates.markupPercent = Number(markupPercent);
+        if (minPriceUsd !== undefined && !isNaN(Number(minPriceUsd))) fsUpdates.minPriceUsd = Number(minPriceUsd);
+        if (exchangeRateInr !== undefined && !isNaN(Number(exchangeRateInr))) fsUpdates.exchangeRateInr = Number(exchangeRateInr);
+        fsUpdates.updatedAt = new Date().toISOString();
+
+        await setDoc(doc(db, FS_COLLECTIONS.PRICING, "fivesim_pricing"), fsUpdates, { merge: true });
+      }
+    } catch (fsErr) {
+      console.warn("Firestore pricing update warning:", fsErr);
+    }
+
+    // 2. Save to Prisma as local fallback
     await Promise.all(updates);
 
     return NextResponse.json({
       success: true,
-      message: "Pricing configuration updated successfully.",
+      message: "Pricing configuration updated successfully in Cloud Firestore and local database.",
     });
   } catch (error: any) {
     console.error("Error updating pricing:", error);

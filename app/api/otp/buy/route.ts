@@ -3,6 +3,9 @@ import { getSessionUser } from "@/lib/jwt";
 import { FiveSimService } from "@/services/fivesim.service";
 import { WalletService } from "@/services/wallet.service";
 import prisma from "@/lib/prisma";
+import { db } from "@/lib/firebase";
+import { FS_COLLECTIONS } from "@/lib/collections";
+import { doc, setDoc } from "firebase/firestore";
 import { formatServiceName, formatCountryName } from "@/lib/fivesim-catalog";
 
 export const dynamic = "force-dynamic";
@@ -67,21 +70,21 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 3. Purchase activation number on 5SIM
-    let fiveSimOrder;
+    // 3. Purchase activation number via carrier gateway
+    let carrierOrder;
     try {
-      fiveSimOrder = await FiveSimService.buyActivation({
+      carrierOrder = await FiveSimService.buyActivation({
         country,
         operator,
         product,
       });
     } catch (orderError: any) {
-      // 5SIM purchase failed -> Instantly refund user's wallet!
+      // Carrier allocation failed -> Instantly refund user's wallet!
       await WalletService.refundForFailedRequest({
         userId: sessionUser.id,
         amount: chargeAmountInr,
         referenceId,
-        reason: `5SIM purchase failed: ${orderError.message}`,
+        reason: `Carrier allocation timed out: ${orderError.message}`,
       });
 
       return NextResponse.json(
@@ -93,44 +96,86 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 4. Save order record in local database
-    const expiresAt = fiveSimOrder.expires ? new Date(fiveSimOrder.expires) : new Date(Date.now() + 20 * 60 * 1000);
+    // 4. Save order record in local database with compliance telemetry
+    const expiresAt = carrierOrder.expires ? new Date(carrierOrder.expires) : new Date(Date.now() + 20 * 60 * 1000);
+    const ipAddress =
+      req.headers.get("x-forwarded-for")?.split(",")[0]?.trim() ||
+      req.headers.get("x-real-ip") ||
+      "127.0.0.1";
+    const userAgent = req.headers.get("user-agent") || "Unknown";
     
     let dbOrder;
     try {
       dbOrder = await prisma.otpOrder.create({
         data: {
           userId: sessionUser.id,
-          fiveSimId: fiveSimOrder.id,
-          phone: fiveSimOrder.phone,
+          fiveSimId: carrierOrder.id,
+          phone: carrierOrder.phone,
           service: product,
           serviceName: productItem.name,
           country,
           countryName: formatCountryName(country),
-          operator: fiveSimOrder.operator || operator,
+          operator: carrierOrder.operator || operator,
           cost: chargeAmountInr,
           costFiveSim: wholesaleUsd,
           currency: "INR",
           status: "PENDING",
           expiresAt,
+          ipAddress,
+          userAgent,
         },
       });
     } catch (dbErr) {
       console.error("Failed to save OtpOrder to DB:", dbErr);
     }
 
+    // 4b. Synchronize Order to Cloud Firestore (Primary cloud storage)
+    if (db) {
+      try {
+        await setDoc(doc(db, FS_COLLECTIONS.OTP_ORDERS, String(carrierOrder.id)), {
+          id: dbOrder?.id || `ord_${carrierOrder.id}`,
+          fiveSimId: carrierOrder.id,
+          userId: sessionUser.id,
+          userEmail: sessionUser.email,
+          userName: sessionUser.name,
+          phone: carrierOrder.phone,
+          service: product,
+          serviceName: productItem.name,
+          country,
+          countryName: formatCountryName(country),
+          operator: carrierOrder.operator || operator,
+          cost: chargeAmountInr,
+          costFiveSim: wholesaleUsd,
+          currency: "INR",
+          status: "PENDING",
+          smsCode: null,
+          smsText: null,
+          smsSender: null,
+          smsReceivedAt: null,
+          expiresAt: expiresAt.toISOString(),
+          isRefunded: false,
+          ipAddress,
+          userAgent,
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+      } catch (fsErr) {
+        console.warn("Firestore save OtpOrder warning:", fsErr);
+      }
+    }
+
     return NextResponse.json({
       success: true,
       message: "Phone number allocated successfully! Waiting for SMS...",
       order: {
-        id: dbOrder?.id || `ord_${fiveSimOrder.id}`,
-        fiveSimId: fiveSimOrder.id,
-        phone: fiveSimOrder.phone,
+        id: dbOrder?.id || `ord_${carrierOrder.id}`,
+        fiveSimId: carrierOrder.id,
+        phone: carrierOrder.phone,
         service: product,
         serviceName: productItem.name,
         country,
         countryName: formatCountryName(country),
-        operator: fiveSimOrder.operator || operator,
+        operator: carrierOrder.operator || operator,
         cost: chargeAmountInr,
         costUsd: chargeAmountUsd,
         status: "PENDING",

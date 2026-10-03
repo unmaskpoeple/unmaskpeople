@@ -314,8 +314,8 @@ export function ActiveOtpCard({
           Allocated Virtual Phone Number
         </label>
         <div className="flex flex-col sm:flex-row items-stretch sm:items-center justify-between gap-3 p-4 rounded-2xl bg-[#030712]/90 border border-slate-800">
-          <div className="flex items-center gap-3">
-            <span className="font-mono text-xl sm:text-2xl font-black text-cyan-300 tracking-wider select-all">
+          <div className="flex items-center gap-3 min-w-0">
+            <span className="font-mono text-xl sm:text-2xl font-black text-cyan-300 tracking-wider select-all break-all">
               {order.phone}
             </span>
           </div>
@@ -413,8 +413,8 @@ export function ActiveOtpCard({
 
       {/* Action Footer */}
       <div className="mt-5 pt-4 border-t border-slate-800/80 flex flex-wrap items-center justify-between gap-3">
-        <div className="text-[11px] text-slate-500">
-          Order ID: #{order.fiveSimId} • ID: {order.id.slice(0, 8)}...
+        <div className="text-[11px] text-slate-500 font-mono">
+          Ref: #{order.fiveSimId} • Order: {order.id.slice(0, 8)}...
         </div>
 
         <div className="flex items-center gap-2">

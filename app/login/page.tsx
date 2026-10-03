@@ -24,16 +24,12 @@ export default function LoginPage() {
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [loading, setLoading] = useState(false);
+  const [googleLoading, setGoogleLoading] = useState(false);
   const [errorMsg, setErrorMsg] = useState("");
-  const [unverifiedEmail, setUnverifiedEmail] = useState<string | null>(null);
-  const [resending, setResending] = useState(false);
-  const [simulatedUrl, setSimulatedUrl] = useState<string | null>(null);
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setErrorMsg("");
-    setUnverifiedEmail(null);
-    setSimulatedUrl(null);
     setLoading(true);
 
     try {
@@ -43,7 +39,6 @@ export default function LoginPage() {
       login(data.user);
       toast.success("Welcome Back", `Logged in as ${data.user.name}`);
 
-      // If admin logging in via user portal, redirect to admin, else to home
       if (data.user.role === "ADMIN") {
         router.push("/admin");
       } else {
@@ -57,34 +52,36 @@ export default function LoginPage() {
     }
   };
 
-  const handleResendActivation = async () => {
-    if (!unverifiedEmail) return;
-    setResending(true);
+  const handleGoogleLogin = async () => {
+    setErrorMsg("");
+    setGoogleLoading(true);
     try {
-      const res = await fetch("/api/auth/resend-verification", {
-        method: "POST",
-        headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ email: unverifiedEmail }),
-      });
-      const data = await res.json();
-      if (!res.ok) throw new Error(data.error || "Failed to resend activation link.");
+      const { loginWithGoogle } = await import("@/lib/firebase-auth-helper");
+      const data = await loginWithGoogle();
 
-      if (data.simulatedActivationUrl) {
-        setSimulatedUrl(data.simulatedActivationUrl);
+      login(data.user);
+      toast.success("Welcome!", `Signed in with Google as ${data.user.name}`);
+
+      if (data.user.role === "ADMIN") {
+        router.push("/admin");
+      } else {
+        router.push("/");
       }
-      toast.success("Link Sent", `Fresh activation email sent to ${unverifiedEmail}`);
     } catch (err: any) {
-      toast.error("Resend Error", err.message);
+      if (err.code !== "auth/popup-closed-by-user") {
+        setErrorMsg(err.message || "Failed to sign in with Google.");
+        toast.error("Google Sign-In Error", err.message);
+      }
     } finally {
-      setResending(false);
+      setGoogleLoading(false);
     }
   };
 
   return (
-    <div className="min-h-screen bg-cyber-mesh text-slate-100 flex flex-col justify-between p-4 sm:p-6 relative overflow-hidden selection:bg-indigo-500 selection:text-white">
+    <div className="min-h-screen bg-cyber-mesh text-slate-100 flex flex-col justify-between p-4 sm:p-6 relative overflow-hidden selection:bg-cyan-500/30 selection:text-cyan-200">
       <div className="absolute inset-0 bg-cyber-dots pointer-events-none opacity-40 z-0" />
       <div className="absolute -top-40 -left-40 w-96 h-96 bg-cyan-500/15 rounded-full blur-[128px] pointer-events-none z-0" />
-      <div className="absolute -top-40 -right-40 w-96 h-96 bg-fuchsia-500/15 rounded-full blur-[128px] pointer-events-none z-0" />
+      <div className="absolute -top-40 -right-40 w-96 h-96 bg-indigo-500/15 rounded-full blur-[128px] pointer-events-none z-0" />
 
       {/* Top Bar with Brand & Back to Home */}
       <div className="flex items-center justify-between max-w-6xl w-full mx-auto relative z-10">
@@ -95,7 +92,7 @@ export default function LoginPage() {
           className="inline-flex items-center gap-2 text-xs font-bold text-slate-400 hover:text-cyan-400 bg-slate-900/60 border border-slate-800 px-3.5 py-2 rounded-xl backdrop-blur-xl transition-colors"
         >
           <ArrowLeft className="w-3.5 h-3.5" />
-          <span>Back to Home</span>
+          <span>Back to Store</span>
         </Link>
       </div>
 
@@ -103,63 +100,72 @@ export default function LoginPage() {
       <div className="w-full max-w-md mx-auto my-8 relative z-10 space-y-6">
         <div className="text-center space-y-2">
           <h1 className="text-3xl sm:text-4xl font-black tracking-tight leading-tight">
-            <span className="gradient-letter">Sign In to</span>{" "}
-            <span className="gradient-letter-cyan">UnMaskPeople.in</span>
+            <span className="text-white">Sign In to</span>{" "}
+            <span className="bg-gradient-to-r from-cyan-400 via-sky-400 to-indigo-400 bg-clip-text text-transparent">
+              NumVerge OTP
+            </span>
           </h1>
           <p className="text-xs text-slate-400 font-medium">
-            Access verification services and prepaid wallet
+            Access virtual numbers, active SMS inbox, and prepaid balance
           </p>
         </div>
 
         <div className="rounded-3xl bg-slate-900/90 border border-slate-800 p-6 md:p-8 shadow-2xl backdrop-blur-2xl relative group">
           <div className="absolute -inset-0.5 rounded-3xl bg-gradient-to-r from-cyan-500 via-indigo-500 to-fuchsia-500 opacity-20 group-hover:opacity-40 blur-xl transition-opacity -z-10" />
 
+          {errorMsg && (
+            <div className="p-3.5 mb-4 rounded-xl bg-rose-950/60 border border-rose-800/80 text-xs text-rose-300">
+              {errorMsg}
+            </div>
+          )}
+
+          {/* 1-Click Firebase Google Sign-In */}
+          <button
+            type="button"
+            onClick={handleGoogleLogin}
+            disabled={googleLoading || loading}
+            className="w-full py-3 px-4 rounded-xl bg-slate-950 hover:bg-slate-800/80 border border-slate-700/80 text-white font-bold text-xs sm:text-sm flex items-center justify-center gap-3 transition-all shadow-md hover:border-slate-600 disabled:opacity-50"
+          >
+            {googleLoading ? (
+              <>
+                <Loader2 className="w-4 h-4 animate-spin text-cyan-400" />
+                <span>Signing in with Google...</span>
+              </>
+            ) : (
+              <>
+                <svg className="w-4 h-4" viewBox="0 0 24 24">
+                  <path
+                    fill="#4285F4"
+                    d="M22.56 12.25c0-.78-.07-1.53-.2-2.25H12v4.26h5.92c-.26 1.37-1.04 2.53-2.21 3.31v2.77h3.57c2.08-1.92 3.28-4.74 3.28-8.09z"
+                  />
+                  <path
+                    fill="#34A853"
+                    d="M12 23c2.97 0 5.46-.98 7.28-2.66l-3.57-2.77c-.98.66-2.23 1.06-3.71 1.06-2.86 0-5.29-1.93-6.16-4.53H2.18v2.84C3.99 20.53 7.7 23 12 23z"
+                  />
+                  <path
+                    fill="#FBBC05"
+                    d="M5.84 14.09c-.22-.66-.35-1.36-.35-2.09s.13-1.43.35-2.09V7.06H2.18C1.43 8.55 1 10.22 1 12s.43 3.45 1.18 4.94l2.85-2.22.81-.63z"
+                  />
+                  <path
+                    fill="#EA4335"
+                    d="M12 5.38c1.62 0 3.06.56 4.21 1.64l3.15-3.15C17.45 2.09 14.97 1 12 1 7.7 1 3.99 3.47 2.18 7.06l3.66 2.84c.87-2.6 3.3-4.52 6.16-4.52z"
+                  />
+                </svg>
+                <span>Continue with Google</span>
+              </>
+            )}
+          </button>
+
+          {/* Divider */}
+          <div className="flex items-center my-4">
+            <div className="flex-1 border-t border-slate-800" />
+            <span className="px-3 text-[11px] font-semibold text-slate-500 uppercase tracking-wider">
+              Or sign in with email
+            </span>
+            <div className="flex-1 border-t border-slate-800" />
+          </div>
+
           <form onSubmit={handleLogin} className="space-y-4">
-            {errorMsg && (
-              <div className="p-3.5 rounded-xl bg-rose-950/60 border border-rose-800/80 text-xs text-rose-300">
-                {errorMsg}
-              </div>
-            )}
-
-            {unverifiedEmail && (
-              <div className="p-4 rounded-2xl bg-amber-950/50 border border-amber-800/80 text-xs space-y-2.5">
-                <div className="flex items-center justify-between">
-                  <span className="font-bold text-amber-300">Account Activation Required</span>
-                  <span className="text-[10px] bg-amber-900/60 text-amber-300 px-2 py-0.5 rounded-full font-mono">Unverified</span>
-                </div>
-                <p className="text-[11px] text-amber-200/80">
-                  Did not receive the activation email sent to <strong>{unverifiedEmail}</strong>?
-                </p>
-                <button
-                  type="button"
-                  disabled={resending}
-                  onClick={handleResendActivation}
-                  className="w-full py-2 px-3 rounded-xl bg-amber-600 hover:bg-amber-500 text-white font-bold text-xs transition-colors shadow-sm flex items-center justify-center gap-1.5 disabled:opacity-50"
-                >
-                  {resending ? (
-                    <>
-                      <Loader2 className="w-3.5 h-3.5 animate-spin" />
-                      <span>Sending Email...</span>
-                    </>
-                  ) : (
-                    <span>Resend Activation Link</span>
-                  )}
-                </button>
-
-                {simulatedUrl && (
-                  <div className="pt-1 border-t border-amber-800/60">
-                    <p className="text-[10px] text-slate-400 mb-1">Sandbox Test Link:</p>
-                    <Link
-                      href={simulatedUrl}
-                      className="text-[11px] font-mono text-cyan-400 hover:underline break-all block bg-slate-950/80 p-2 rounded-lg border border-slate-800"
-                    >
-                      {simulatedUrl}
-                    </Link>
-                  </div>
-                )}
-              </div>
-            )}
-
             <div>
               <label className="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
                 Email Address
@@ -204,13 +210,13 @@ export default function LoginPage() {
 
             <button
               type="submit"
-              disabled={loading}
-              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 via-indigo-500 to-fuchsia-500 hover:opacity-95 text-white font-extrabold text-sm shadow-lg shadow-indigo-500/25 transition-all flex items-center justify-center gap-2 disabled:opacity-50 mt-2"
+              disabled={loading || googleLoading}
+              className="w-full py-3.5 rounded-xl bg-gradient-to-r from-cyan-500 via-sky-500 to-indigo-600 hover:opacity-95 text-white font-extrabold text-sm shadow-lg shadow-cyan-500/20 transition-all flex items-center justify-center gap-2 disabled:opacity-50 mt-2"
             >
               {loading ? (
                 <>
                   <Loader2 className="w-4 h-4 animate-spin text-white" />
-                  <span>Signing In...</span>
+                  <span>Signing In with Firebase...</span>
                 </>
               ) : (
                 <>
@@ -227,7 +233,7 @@ export default function LoginPage() {
               href="/register"
               className="text-cyan-400 hover:text-cyan-300 font-bold hover:underline"
             >
-              Register with ₹50 credit
+              Create Account
             </Link>
           </div>
         </div>
@@ -239,14 +245,14 @@ export default function LoginPage() {
             className="inline-flex items-center gap-1.5 text-xs text-slate-400 hover:text-cyan-400 transition-colors"
           >
             <Shield className="w-3.5 h-3.5 text-cyan-400" />
-            <span>Switch to Secure Administrator Login Portal</span>
+            <span>Switch to Administrator Console</span>
           </Link>
         </div>
       </div>
 
       {/* Footer */}
       <footer className="text-center text-xs text-slate-500 py-4 relative z-10">
-        © 2026 UnMaskPeople.in. All rights reserved.
+        © 2026 NumVerge OTP. All rights reserved. • Intermediary Communications Platform
       </footer>
     </div>
   );

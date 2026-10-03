@@ -1,6 +1,9 @@
 import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/jwt";
 import prisma from "@/lib/prisma";
+import { db } from "@/lib/firebase";
+import { FS_COLLECTIONS } from "@/lib/collections";
+import { collection, query, where, getDocs } from "firebase/firestore";
 import { WalletService } from "@/services/wallet.service";
 
 export const dynamic = "force-dynamic";
@@ -19,6 +22,45 @@ export async function GET(req: NextRequest) {
     const filterStatus = searchParams.get("status") || "all";
     const limit = Math.min(Number(searchParams.get("limit") || 50), 100);
 
+    // 1. Try Cloud Firestore (Primary online source of truth)
+    if (db) {
+      try {
+        const ordersRef = collection(db, FS_COLLECTIONS.OTP_ORDERS);
+        const qSnap = await getDocs(ordersRef);
+        let fsOrders: any[] = [];
+        qSnap.forEach((docSnap) => {
+          const d = docSnap.data();
+          if (d.userId === sessionUser.id || (sessionUser.email && d.userEmail === sessionUser.email)) {
+            fsOrders.push({
+              id: docSnap.id,
+              ...d,
+            });
+          }
+        });
+
+        if (fsOrders.length > 0) {
+          fsOrders.sort((a, b) => new Date(b.createdAt || 0).getTime() - new Date(a.createdAt || 0).getTime());
+
+          if (filterStatus === "active") {
+            fsOrders = fsOrders.filter((o) => o.status === "PENDING");
+          } else if (filterStatus === "received") {
+            fsOrders = fsOrders.filter((o) => o.status === "RECEIVED" || o.status === "FINISHED");
+          } else if (filterStatus === "canceled") {
+            fsOrders = fsOrders.filter((o) => ["CANCELED", "TIMEOUT", "BANNED"].includes(o.status));
+          }
+
+          return NextResponse.json({
+            success: true,
+            count: fsOrders.length,
+            orders: fsOrders.slice(0, limit),
+          });
+        }
+      } catch (fsErr) {
+        console.warn("Firestore orders fetch warning:", fsErr);
+      }
+    }
+
+    // 2. Fallback to Prisma SQLite (Local database)
     const whereClause: any = { userId: sessionUser.id };
 
     if (filterStatus === "active") {

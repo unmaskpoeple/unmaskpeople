@@ -3,6 +3,9 @@ import { getSessionUser } from "@/lib/jwt";
 import { FiveSimService } from "@/services/fivesim.service";
 import { WalletService } from "@/services/wallet.service";
 import prisma from "@/lib/prisma";
+import { db } from "@/lib/firebase";
+import { FS_COLLECTIONS } from "@/lib/collections";
+import { doc, updateDoc, setDoc } from "firebase/firestore";
 
 export const dynamic = "force-dynamic";
 
@@ -58,12 +61,12 @@ export async function POST(req: NextRequest) {
       );
     }
 
-    // 1. Cancel on 5SIM
+    // 1. Cancel on carrier gateway
     try {
       await FiveSimService.cancelOrder(order.fiveSimId);
     } catch (cancelErr: any) {
-      console.warn("5SIM cancel error:", cancelErr.message);
-      // Even if 5SIM says already canceled/expired, continue to refund locally
+      console.warn("Carrier cancel warning:", cancelErr.message);
+      // Even if carrier says already canceled/expired, continue to refund locally
     }
 
     // 2. Refund user's wallet
@@ -82,6 +85,23 @@ export async function POST(req: NextRequest) {
         isRefunded: true,
       },
     });
+
+    // Sync CANCELED state to Cloud Firestore
+    if (db) {
+      try {
+        await setDoc(
+          doc(db, FS_COLLECTIONS.OTP_ORDERS, String(order.fiveSimId)),
+          {
+            status: "CANCELED",
+            isRefunded: true,
+            updatedAt: new Date().toISOString(),
+          },
+          { merge: true }
+        );
+      } catch (e) {
+        console.warn("Firestore cancel sync error:", e);
+      }
+    }
 
     return NextResponse.json({
       success: true,

@@ -44,7 +44,7 @@ export default function HomePage() {
   ];
 
   return (
-    <div className="min-h-screen bg-[#030712] text-slate-100 flex flex-col justify-between selection:bg-cyan-500/30 selection:text-cyan-200 relative overflow-x-hidden">
+    <div className="min-h-screen bg-[#030712] text-slate-100 flex flex-col justify-between selection:bg-cyan-500/30 selection:text-cyan-200 relative overflow-x-hidden w-full max-w-[100vw]">
       {/* Background ambient lighting */}
       <div className="fixed inset-0 pointer-events-none z-0">
         <div className="absolute top-0 left-1/2 -translate-x-1/2 w-[1000px] h-[500px] bg-gradient-to-b from-cyan-600/10 via-indigo-600/5 to-transparent blur-3xl rounded-full" />
@@ -143,14 +143,14 @@ export default function HomePage() {
                     <div className="flex items-start gap-3">
                       <CheckCircle2 className="w-4 h-4 text-emerald-400 flex-shrink-0 mt-0.5" />
                       <div className="text-xs text-slate-300">
-                        <strong className="text-white">Developer Friendly API:</strong> Scale up and automate verification workflows with our REST API.
+                        <strong className="text-white">High-Throughput Telecom Routing:</strong> Rapid direct carrier routing across Tier-1 global nodes for maximum SMS delivery rates.
                       </div>
                     </div>
                   </div>
                 </div>
 
                 {/* Right Visual Stats Box */}
-                <div className="grid grid-cols-2 gap-4">
+                <div className="grid grid-cols-2 gap-3 sm:gap-4">
                   <div className="p-6 rounded-2xl bg-[#030712]/90 border border-slate-800 space-y-2">
                     <Zap className="w-6 h-6 text-cyan-400" />
                     <div className="text-2xl font-black text-white">&lt; 10s</div>

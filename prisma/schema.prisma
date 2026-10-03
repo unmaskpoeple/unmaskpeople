@@ -24,13 +24,11 @@ model User {
 
   wallet                Wallet?
   walletTransactions    WalletTransaction[]
-  apiRequests           ApiRequest[]
   payments              Payment[]
   adminAuditLogs        AuditLog[]          @relation("AdminAudits")
   referralsGiven        Referral[]          @relation("Referrer")
   referralReceived      Referral?           @relation("ReferredUser")
   otpOrders             OtpOrder[]
-
   @@index([email])
   @@index([role])
   @@index([status])
@@ -63,71 +61,6 @@ model WalletTransaction {
 
   @@index([userId])
   @@index([type])
-  @@index([createdAt])
-}
-
-model ApiConfig {
-  id                  String       @id @default(cuid())
-  name                String
-  description         String?
-  endpoint            String
-  method              String       @default("POST") // GET | POST | PUT
-  authType            String       @default("NONE") // NONE | BEARER_TOKEN | API_KEY_HEADER | API_KEY_QUERY | CUSTOM_HEADER
-  authKeyName         String?      // e.g. "Authorization", "X-Api-Key", "api_key"
-  encryptedSecret     String?      // Server-side encrypted token/key
-  headers             String?      // JSON object of custom headers
-  requestTemplate     String?      // JSON string template
-  phoneParameter      String       @default("phone")
-  cost                Float        @default(5.0) // Cost per request in INR
-  timeout             Int          @default(10000) // Timeout in ms
-  isActive            Boolean      @default(true)
-  
-  // Dynamic Response Mapping
-  successField        String       @default("status")
-  successValues       String       @default("success,true,200,OK,valid")
-  messageField        String       @default("message")
-  resultField         String       @default("data")
-
-  // Health Monitoring
-  lastTestedAt        DateTime?
-  lastTestStatus      String?      // "HEALTHY" | "ERROR" | "TIMEOUT"
-  lastTestLatencyMs   Int?
-  lastTestError       String?
-
-  createdAt           DateTime     @default(now())
-  updatedAt           DateTime     @updatedAt
-
-  requests            ApiRequest[]
-}
-
-model ApiRequest {
-  id              String     @id @default(cuid())
-  userId          String
-  user            User       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  apiConfigId     String?
-  apiConfig       ApiConfig? @relation(fields: [apiConfigId], references: [id], onDelete: SetNull)
-  
-  phoneHash       String     // SHA-256 for integrity / lookup without plaintext exposure
-  maskedPhone     String     // e.g. +91 98*****3210
-  countryCode     String     @default("+91")
-  
-  status          String     @default("PENDING") // PENDING | PROCESSING | SUCCESSFUL | FAILED | REFUNDED
-  httpStatus      Int?
-  amountCharged   Float      @default(0.0)
-  isRefunded      Boolean    @default(false)
-  latencyMs       Int?
-  
-  rawResponse     String?    // Sanitized JSON string of response
-  sanitizedResult String?    // Extracted clean key-value summary
-  errorMessage    String?
-  ipAddress       String?
-  
-  createdAt       DateTime   @default(now())
-  completedAt     DateTime?
-
-  @@index([userId])
-  @@index([status])
-  @@index([phoneHash])
   @@index([createdAt])
 }
 
@@ -211,6 +144,8 @@ model OtpOrder {
   smsReceivedAt DateTime?
   expiresAt     DateTime
   isRefunded    Boolean   @default(false)
+  ipAddress     String?   // Compliance audit client IP
+  userAgent     String?   // Compliance client user agent
   createdAt     DateTime  @default(now())
   updatedAt     DateTime  @updatedAt
 

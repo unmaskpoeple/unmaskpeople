@@ -60,8 +60,8 @@ export class EmailService {
 
     const { transporter, isConfigured } = await this.getTransporter();
 
-    const fromName = settings.smtp_from_name || "UnMaskPeople.in Security";
-    const fromEmail = settings.smtp_from_email || "no-reply@unmaskpeople.in";
+    const fromName = settings.smtp_from_name || "NumVerge OTP Security";
+    const fromEmail = settings.smtp_from_email || "no-reply@numverge.com";
 
     // HTML Email Template with Cyber Dark Theme
     const htmlContent = `
@@ -70,7 +70,7 @@ export class EmailService {
 <head>
   <meta charset="utf-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Activate Your UnMaskPeople.in Account</title>
+  <title>Activate Your NumVerge Account</title>
   <style>
     body { margin: 0; padding: 0; background-color: #030712; font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, Helvetica, Arial, sans-serif; color: #f3f4f6; }
     .container { max-width: 600px; margin: 40px auto; background-color: #0b0f19; border: 1px solid #1f2937; border-radius: 24px; overflow: hidden; box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.5); }
@@ -93,13 +93,13 @@ export class EmailService {
 <body>
   <div class="container">
     <div class="header">
-      <div class="logo-badge">⚡ UnMaskPeople.in</div>
+      <div class="logo-badge">⚡ NumVerge OTP</div>
       <h1 class="title">Verify Your Email Address</h1>
     </div>
     <div class="content">
       <p class="greeting">Hi ${name || "Subscriber"},</p>
       <p class="message">
-        Thank you for joining UnMaskPeople.in Telecom Intelligence Platform! To activate your account and secure your prepaid wallet, please confirm your email address by clicking the button below:
+        Thank you for joining NumVerge Virtual Number & SMS Platform! To activate your account and secure your prepaid wallet, please confirm your email address by clicking the button below:
       </p>
 
       <div class="bonus-box">
@@ -117,11 +117,11 @@ export class EmailService {
       </div>
 
       <div class="notice">
-        <strong>Security Notice:</strong> This activation link is strictly valid for 24 hours. If you did not sign up for an UnMaskPeople.in account, please ignore this email or contact security support.
+        <strong>Security Notice:</strong> This activation link is strictly valid for 24 hours. If you did not sign up for a NumVerge account, please ignore this email or contact support.
       </div>
     </div>
     <div class="footer">
-      <p style="margin: 0 0 6px 0;">© 2026 UnMaskPeople.in Telecom Intelligence. All rights reserved.</p>
+      <p style="margin: 0 0 6px 0;">© 2026 NumVerge OTP. All rights reserved.</p>
       <p style="margin: 0;">Automated cryptographic notification. Do not reply to this address.</p>
     </div>
   </div>
@@ -132,7 +132,7 @@ export class EmailService {
     const textContent = `
 Hi ${name || "Subscriber"},
 
-Welcome to UnMaskPeople.in! Please verify your email address to activate your account and claim your ₹15.00 welcome credit:
+Welcome to NumVerge OTP! Please verify your email address to activate your account:
 
 ${activationUrl}
 
@@ -140,7 +140,7 @@ This activation link will expire in 24 hours.
 
 If you did not register for an account, please ignore this email.
 
-© 2026 UnMaskPeople.in Telecom Intelligence
+© 2026 NumVerge OTP
 `;
 
     if (isConfigured && transporter) {
@@ -148,7 +148,7 @@ If you did not register for an account, please ignore this email.
         const info = await transporter.sendMail({
           from: `"${fromName}" <${fromEmail}>`,
           to: email,
-          subject: "⚡ Activate your UnMaskPeople.in Account (₹15 Welcome Credit)",
+          subject: "⚡ Activate your NumVerge OTP Account",
           text: textContent,
           html: htmlContent,
         });
@@ -172,7 +172,7 @@ If you did not register for an account, please ignore this email.
     } else {
       // SMTP not configured yet: log activation link for testing
       console.log(`\n======================================================`);
-      console.log(`⚡ [UNMASKPEOPLE.IN EMAIL SIMULATOR] Activation Email`);
+      console.log(`⚡ [NUMVERGE OTP EMAIL SIMULATOR] Activation Email`);
       console.log(`To: ${email} (${name})`);
       console.log(`Activation Link: ${activationUrl}`);
       console.log(`Token: ${token}`);
@@ -204,14 +204,14 @@ If you did not register for an account, please ignore this email.
 
       if (targetEmail) {
         await transporter.sendMail({
-          from: `"${settings.smtp_from_name || "UnMaskPeople.in"}" <${settings.smtp_from_email || "no-reply@unmaskpeople.in"}>`,
+          from: `"${settings.smtp_from_name || "NumVerge OTP"}" <${settings.smtp_from_email || "no-reply@numverge.com"}>`,
           to: targetEmail,
-          subject: "UnMaskPeople.in SMTP Test Message",
-          text: "Congratulations! Your UnMaskPeople.in SMTP mail server is configured properly and successfully sending emails.",
+          subject: "NumVerge OTP SMTP Test Message",
+          text: "Congratulations! Your NumVerge OTP SMTP mail server is configured properly and successfully sending emails.",
           html: `
             <div style="font-family: sans-serif; background: #0f172a; color: #fff; padding: 30px; border-radius: 16px;">
               <h2 style="color: #10b981;">SMTP Connection Successful!</h2>
-              <p>Your mail server settings in UnMaskPeople.in are functioning correctly.</p>
+              <p>Your mail server settings in NumVerge OTP are functioning correctly.</p>
               <p style="font-size: 12px; color: #94a3b8;">Sent at: ${new Date().toISOString()}</p>
             </div>
           `,

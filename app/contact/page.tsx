@@ -94,8 +94,8 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <p className="font-bold text-white">General & Technical Support</p>
-                    <a href="mailto:support@unmaskpeople.in" className="text-cyan-400 hover:underline">
-                      support@unmaskpeople.in
+                    <a href="mailto:support@numverge.com" className="text-cyan-400 hover:underline">
+                      support@numverge.com
                     </a>
                   </div>
                 </div>
@@ -106,8 +106,8 @@ export default function ContactPage() {
                   </div>
                   <div>
                     <p className="font-bold text-white">Billing & Payments Helpdesk</p>
-                    <a href="mailto:billing@unmaskpeople.in" className="text-emerald-400 hover:underline">
-                      billing@unmaskpeople.in
+                    <a href="mailto:billing@numverge.com" className="text-emerald-400 hover:underline">
+                      billing@numverge.com
                     </a>
                   </div>
                 </div>
@@ -119,7 +119,7 @@ export default function ContactPage() {
                   <div>
                     <p className="font-bold text-white">Registered Address (India)</p>
                     <p className="text-slate-400 text-[11px] leading-relaxed">
-                      UnMaskPeople.in Technologies India Pvt Ltd<br />
+                      NumVerge Technologies India Pvt Ltd<br />
                       Tower B, Cyber City, DLF Phase 2<br />
                       Gurugram, Haryana - 122002, India
                     </p>
@@ -148,7 +148,7 @@ export default function ContactPage() {
                 <span>Statutory Grievance Officer</span>
               </span>
               <p>Designated under Rule 3(2) of Information Technology Rules, 2021.</p>
-              <p>Email: <code className="text-cyan-400">grievance@unmaskpeople.in</code></p>
+              <p>Email: <code className="text-cyan-400">grievance@numverge.com</code></p>
             </div>
           </div>
 

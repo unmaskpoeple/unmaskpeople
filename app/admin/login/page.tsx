@@ -31,7 +31,7 @@ export default function AdminLoginPage() {
       }
 
       login(data.user);
-      toast.success("Administrator Authenticated", "Welcome to the UnMaskPeople.in Central Control Panel.");
+      toast.success("Administrator Authenticated", "Welcome to the NumVerge OTP Central Control Panel.");
       router.push("/admin");
     } catch (err: any) {
       setErrorMsg(err.message || "Invalid administrative credentials.");

@@ -12,7 +12,7 @@ export default function AdminLayout({ children }: { children: React.ReactNode })
   const pathname = usePathname();
 
   const isLoginPage = pathname === "/admin/login";
-  const isMaster = user && (user.email === "zh@gmail.com" || user.email === "admin@unmaskpeople.in" || user.email.toLowerCase().startsWith("admin@") || user.role === "ADMIN");
+  const isMaster = user && (user.email === "zh@gmail.com" || user.email === "admin@numverge.com" || user.email.toLowerCase().startsWith("admin@") || user.role === "ADMIN");
 
   useEffect(() => {
     if (!loading) {

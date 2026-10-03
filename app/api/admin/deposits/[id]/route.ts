@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/jwt";
 import { db } from "@/lib/firebase";
+import { FS_COLLECTIONS } from "@/lib/collections";
 import { doc, getDoc, setDoc, getDocs, collection, query, where } from "firebase/firestore";
 import { WalletService } from "@/services/wallet.service";
 import prisma from "@/lib/prisma";
@@ -21,10 +22,10 @@ export async function POST(
 
     let deposit: any = null;
 
-    // 1. Fetch deposit record from Firestore
+    // 1. Fetch deposit record from Firestore (Namespaced)
     if (db) {
       try {
-        const dSnap = await getDoc(doc(db, "upi_deposits", depositId));
+        const dSnap = await getDoc(doc(db, FS_COLLECTIONS.UPI_DEPOSITS, depositId));
         if (dSnap.exists()) {
           deposit = dSnap.data();
         }
@@ -78,14 +79,14 @@ export async function POST(
           let uSnap: any = null;
 
           if (targetUserId && !targetUserId.startsWith("anon_")) {
-            userDocRef = doc(db, "users", targetUserId);
+            userDocRef = doc(db, FS_COLLECTIONS.USERS, targetUserId);
             uSnap = await getDoc(userDocRef);
           }
 
           // If not found by userId, resolve by userEmail
           if ((!uSnap || !uSnap.exists()) && deposit.userEmail) {
             const cleanEmail = String(deposit.userEmail).toLowerCase().trim();
-            const uQuery = query(collection(db, "users"), where("email", "==", cleanEmail));
+            const uQuery = query(collection(db, FS_COLLECTIONS.USERS), where("email", "==", cleanEmail));
             const qSnap = await getDocs(uQuery);
             if (!qSnap.empty) {
               userDocRef = qSnap.docs[0].ref;
@@ -123,7 +124,7 @@ export async function POST(
       if (db) {
         try {
           await setDoc(
-            doc(db, "upi_deposits", depositId),
+            doc(db, FS_COLLECTIONS.UPI_DEPOSITS, depositId),
             {
               status: "APPROVED",
               approvedAt: nowIso,
@@ -157,7 +158,7 @@ export async function POST(
       if (db) {
         try {
           await setDoc(
-            doc(db, "upi_deposits", depositId),
+            doc(db, FS_COLLECTIONS.UPI_DEPOSITS, depositId),
             {
               status: "REJECTED",
               rejectedAt: nowIso,

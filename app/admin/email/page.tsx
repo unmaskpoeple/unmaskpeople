@@ -38,9 +38,9 @@ export default function AdminEmailPage() {
   const [showPass, setShowPass] = useState(false);
   const [hasPass, setHasPass] = useState(false);
 
-  const [fromName, setFromName] = useState("UnMaskPeople.in Security");
-  const [fromEmail, setFromEmail] = useState("no-reply@unmaskpeople.in");
-  const [appUrl, setAppUrl] = useState("https://unmaskpeople.in");
+  const [fromName, setFromName] = useState("NumVerge OTP Security");
+  const [fromEmail, setFromEmail] = useState("no-reply@numverge.com");
+  const [appUrl, setAppUrl] = useState("https://numverge.com");
 
   // Test Email State
   const [testEmail, setTestEmail] = useState("");
@@ -59,9 +59,9 @@ export default function AdminEmailPage() {
         setSecure(Boolean(data.smtp_secure));
         setUser(data.smtp_user || "");
         setHasPass(Boolean(data.smtp_has_pass));
-        setFromName(data.smtp_from_name || "UnMaskPeople.in Security");
-        setFromEmail(data.smtp_from_email || "no-reply@unmaskpeople.in");
-        setAppUrl(data.app_url || "https://unmaskpeople.in");
+        setFromName(data.smtp_from_name || "NumVerge OTP Security");
+        setFromEmail(data.smtp_from_email || "no-reply@numverge.com");
+        setAppUrl(data.app_url || "https://numverge.com");
       }
     } catch (err: any) {
       toast.error("Failed to load settings", err.message);
@@ -345,7 +345,7 @@ export default function AdminEmailPage() {
                 type="text"
                 value={fromName}
                 onChange={(e) => setFromName(e.target.value)}
-                placeholder="UnMaskPeople.in Security"
+                placeholder="NumVerge OTP Security"
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white focus:border-cyan-400 outline-none"
               />
             </div>
@@ -359,7 +359,7 @@ export default function AdminEmailPage() {
                 type="email"
                 value={fromEmail}
                 onChange={(e) => setFromEmail(e.target.value)}
-                placeholder="no-reply@yourdomain.com"
+                placeholder="no-reply@numverge.com"
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-800 bg-slate-950 text-white font-mono focus:border-cyan-400 outline-none"
               />
             </div>
@@ -373,7 +373,7 @@ export default function AdminEmailPage() {
                 type="text"
                 value={appUrl}
                 onChange={(e) => setAppUrl(e.target.value)}
-                placeholder="http://localhost:3000 or https://unmaskpeople.in"
+                placeholder="http://localhost:3000 or https://numverge.com"
                 className="w-full px-4 py-2.5 rounded-xl border border-slate-800 bg-slate-950 text-cyan-400 font-mono focus:border-cyan-400 outline-none"
               />
               <p className="text-[11px] text-slate-500 mt-1">

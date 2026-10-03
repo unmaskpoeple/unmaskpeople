@@ -61,8 +61,8 @@ export function AddMoneyModal({
   const [successInfo, setSuccessInfo] = useState<{ amount: number; utr: string; message: string } | null>(null);
 
   // Dynamic Gateway Settings from Server
-  const [upiId, setUpiId] = useState<string>("unmaskpeople@upi");
-  const [upiPayeeName, setUpiPayeeName] = useState<string>("UnMaskPeople");
+  const [upiId, setUpiId] = useState<string>("numverge@upi");
+  const [upiPayeeName, setUpiPayeeName] = useState<string>("NumVerge OTP");
   const [upiQrImageUrl, setUpiQrImageUrl] = useState<string>("");
   const [upiMinDeposit, setUpiMinDeposit] = useState<number>(10);
   const [upiInstructions, setUpiInstructions] = useState<string>("");
@@ -125,7 +125,7 @@ export function AddMoneyModal({
   // Construct standard NPCI UPI Payment URI
   const upiUri = `upi://pay?pa=${encodeURIComponent(upiId)}&pn=${encodeURIComponent(
     upiPayeeName
-  )}&am=${effectiveAmount || 100}&cu=INR&tn=${encodeURIComponent("UnmaskPeople Wallet Topup")}`;
+  )}&am=${effectiveAmount || 100}&cu=INR&tn=${encodeURIComponent("NumVerge OTP Wallet Topup")}`;
 
   // High-contrast, scannable QR Code
   const dynamicQrUrl = `https://api.qrserver.com/v1/create-qr-code/?size=300x300&margin=12&data=${encodeURIComponent(
@@ -200,7 +200,7 @@ export function AddMoneyModal({
       }
 
       if (data.status === "APPROVED") {
-        toast.success("Deposit Approved!", data.message || "Wallet credited successfully!");
+        toast.success("Wallet Credited!", data.message || `₹${effectiveAmount.toFixed(2)} added to your wallet!`);
         if (typeof data.walletBalance === "number") {
           updateBalanceLocally(data.walletBalance);
           if (onBalanceUpdated) onBalanceUpdated(data.walletBalance);
@@ -208,8 +208,9 @@ export function AddMoneyModal({
         setSuccessInfo({
           amount: effectiveAmount,
           utr: cleanUtr,
-          message: data.message || `₹${effectiveAmount.toFixed(2)} added to your wallet!`,
+          message: data.message || `₹${effectiveAmount.toFixed(2)} has been added to your wallet instantly! You can now activate virtual numbers.`,
         });
+        setUtrNumber("");
       } else {
         toast.success("Deposit Request Submitted", "UTR recorded for verification. Admin will credit your balance shortly.");
         setSuccessInfo({
@@ -505,8 +506,8 @@ export function AddMoneyModal({
                       <p className="text-[10px] text-slate-400 leading-tight">Open payment receipt and copy the 12-digit UPI Ref ID.</p>
                     </div>
                     <div className="p-2.5 rounded-xl bg-slate-950/80 border border-slate-800/80 space-y-1">
-                      <p className="font-bold text-white text-[11px]">3. Submit Below</p>
-                      <p className="text-[10px] text-slate-400 leading-tight">Paste below & submit to credit your wallet.</p>
+                      <p className="font-bold text-white text-[11px]">3. Instant Balance Addition</p>
+                      <p className="text-[10px] text-slate-400 leading-tight">Paste below & money gets added directly to your account.</p>
                     </div>
                   </div>
 

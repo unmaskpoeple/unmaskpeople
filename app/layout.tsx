@@ -14,6 +14,11 @@ export const viewport: Viewport = {
 export const metadata: Metadata = {
   title: "NumVerge OTP - Instant Virtual Phone Numbers & SMS Verification",
   description: "Receive OTP and SMS verification online with real virtual numbers across 150+ countries and 1,320+ services. Instant delivery with 100% automated refund guarantee.",
+  icons: {
+    icon: "/logo.png",
+    shortcut: "/logo.png",
+    apple: "/logo.png",
+  },
 };
 
 export default function RootLayout({

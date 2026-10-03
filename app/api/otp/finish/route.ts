@@ -2,6 +2,9 @@ import { NextRequest, NextResponse } from "next/server";
 import { getSessionUser } from "@/lib/jwt";
 import { FiveSimService } from "@/services/fivesim.service";
 import prisma from "@/lib/prisma";
+import { db } from "@/lib/firebase";
+import { FS_COLLECTIONS } from "@/lib/collections";
+import { doc, updateDoc, setDoc } from "firebase/firestore";
 
 export const dynamic = "force-dynamic";
 
@@ -46,13 +49,29 @@ export async function POST(req: NextRequest) {
     try {
       await FiveSimService.finishOrder(order.fiveSimId);
     } catch (e: any) {
-      console.warn("5SIM finish warning:", e.message);
+      console.warn("Carrier finish warning:", e.message);
     }
 
     const updated = await prisma.otpOrder.update({
       where: { id: order.id },
       data: { status: "FINISHED" },
     });
+
+    // Sync FINISHED state to Cloud Firestore
+    if (db) {
+      try {
+        await setDoc(
+          doc(db, FS_COLLECTIONS.OTP_ORDERS, String(order.fiveSimId)),
+          {
+            status: "FINISHED",
+            updatedAt: new Date().toISOString(),
+          },
+          { merge: true }
+        );
+      } catch (e) {
+        console.warn("Firestore finish sync error:", e);
+      }
+    }
 
     return NextResponse.json({
       success: true,

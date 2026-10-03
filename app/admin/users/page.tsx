@@ -244,7 +244,7 @@ export default function AdminUsersPage() {
                   <th className="py-3.5 px-4">Role</th>
                   <th className="py-3.5 px-4">Status</th>
                   <th className="py-3.5 px-4 text-right">Wallet Balance</th>
-                  <th className="py-3.5 px-4 text-center">Lookups</th>
+                  <th className="py-3.5 px-4 text-center">OTP Orders</th>
                   <th className="py-3.5 px-4 text-center">Joined</th>
                   <th className="py-3.5 px-4 text-right">Administrative Actions</th>
                 </tr>
@@ -288,7 +288,7 @@ export default function AdminUsersPage() {
                         ₹{Number(u.wallet?.balance ?? 0).toFixed(2)}
                       </td>
                       <td className="py-3.5 px-4 text-center font-mono text-slate-300">
-                        {u._count?.apiRequests ?? 0}
+                        {u._count?.otpOrders ?? 0}
                       </td>
                       <td className="py-3.5 px-4 text-center text-slate-400">
                         {u.createdAt ? new Date(u.createdAt).toLocaleDateString() : "-"}

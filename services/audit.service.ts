@@ -1,5 +1,6 @@
 import prisma from "@/lib/prisma";
 import { db } from "@/lib/firebase";
+import { FS_COLLECTIONS } from "@/lib/collections";
 import { collection, addDoc } from "firebase/firestore";
 
 export interface CreateAuditLogParams {
@@ -15,7 +16,7 @@ export class AuditService {
   static async record(params: CreateAuditLogParams) {
     if (db) {
       try {
-        await addDoc(collection(db, "audit_logs"), {
+        await addDoc(collection(db, FS_COLLECTIONS.AUDIT_LOGS), {
           adminId: params.adminId || null,
           action: params.action,
           targetType: params.targetType,
@@ -57,7 +58,7 @@ export class AuditService {
     if (db) {
       try {
         const { getDocs } = await import("firebase/firestore");
-        const snap = await getDocs(collection(db, "audit_logs"));
+        const snap = await getDocs(collection(db, FS_COLLECTIONS.AUDIT_LOGS));
         if (!snap.empty) {
           const fsAudits: any[] = [];
           snap.forEach((doc) => {

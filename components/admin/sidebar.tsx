@@ -25,14 +25,13 @@ import { BrandLogo } from "@/components/brand-logo";
 
 const ADMIN_NAV = [
   { name: "Overview & Analytics", href: "/admin", icon: LayoutDashboard },
-  { name: "Referral Program", href: "/admin/referrals", icon: Share2 },
+  { name: "Carrier & Pricing Settings", href: "/admin/gateway-settings", icon: Cpu },
   { name: "UPI Gateway & Deposits", href: "/admin/gateway", icon: QrCode },
-  { name: "Email & SMTP", href: "/admin/email", icon: Mail },
   { name: "User Management", href: "/admin/users", icon: Users },
-  { name: "API Configuration", href: "/admin/apis", icon: Cpu },
-  { name: "Pricing & Rate Limits", href: "/admin/pricing", icon: BadgeDollarSign },
-  { name: "Operational API Logs", href: "/admin/logs", icon: Activity },
+  { name: "OTP Orders & SMS Logs", href: "/admin/logs", icon: Activity },
   { name: "Audit Trail & Security", href: "/admin/audits", icon: FileCheck2 },
+  { name: "Referral Program", href: "/admin/referrals", icon: Share2 },
+  { name: "Email & SMTP", href: "/admin/email", icon: Mail },
   { name: "Platform Settings", href: "/admin/settings", icon: Settings },
 ];
 

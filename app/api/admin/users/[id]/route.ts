@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/jwt";
 import prisma from "@/lib/prisma";
 import { db } from "@/lib/firebase";
+import { FS_COLLECTIONS } from "@/lib/collections";
 import { doc, getDoc, updateDoc } from "firebase/firestore";
 import bcrypt from "bcryptjs";
 import { AuditService } from "@/services/audit.service";
@@ -13,10 +14,10 @@ export async function GET(
   try {
     await requireAdmin(req);
 
-    // 1. Try Firestore
+    // 1. Try Firestore (Namespaced)
     if (db) {
       try {
-        const userDoc = await getDoc(doc(db, "users", params.id));
+        const userDoc = await getDoc(doc(db, FS_COLLECTIONS.USERS, params.id));
         if (userDoc.exists()) {
           const d = userDoc.data();
           return NextResponse.json({
@@ -28,7 +29,7 @@ export async function GET(
               status: d.status || "ACTIVE",
               emailVerified: d.emailVerified ?? true,
               wallet: { balance: d.walletBalance ?? 0, currency: "INR" },
-              _count: { apiRequests: 0, walletTransactions: 0 },
+              _count: { otpOrders: 0, walletTransactions: 0 },
             },
           });
         }
@@ -44,7 +45,7 @@ export async function GET(
         include: {
           wallet: true,
           _count: {
-            select: { apiRequests: true, walletTransactions: true },
+            select: { otpOrders: true, walletTransactions: true },
           },
         },
       });
@@ -87,7 +88,7 @@ export async function PUT(
     let fsUpdated = false;
     if (db) {
       try {
-        const userRef = doc(db, "users", params.id);
+        const userRef = doc(db, FS_COLLECTIONS.USERS, params.id);
         const userSnap = await getDoc(userRef);
         if (userSnap.exists()) {
           await updateDoc(userRef, updates);

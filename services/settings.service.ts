@@ -44,7 +44,7 @@ export interface SystemSettingsMap {
 }
 
 const DEFAULT_SETTINGS: SystemSettingsMap = {
-  site_name: "UnMaskPeople.in",
+  site_name: "NumVerge OTP",
   currency_symbol: "₹",
   currency_code: "INR",
   default_cost_per_request: 3.5,
@@ -56,7 +56,7 @@ const DEFAULT_SETTINGS: SystemSettingsMap = {
   maintenance_mode: false,
   privacy_mask_phone: true,
   data_retention_days: 90,
-  webhook_secret: "whsec_unmaskpeople_mock_webhook_key_xyz",
+  webhook_secret: "whsec_numverge_mock_webhook_key_xyz",
 
   // Defaults as per user requirements
   welcome_bonus: 0.0,
@@ -66,10 +66,10 @@ const DEFAULT_SETTINGS: SystemSettingsMap = {
 
   // Manual UPI Defaults
   upi_enabled: true,
-  upi_id: process.env.NEXT_PUBLIC_UPI_ID || "unmaskpeople@upi",
-  upi_payee_name: "UnMaskPeople",
+  upi_id: process.env.NEXT_PUBLIC_UPI_ID || "numverge@upi",
+  upi_payee_name: "NumVerge OTP",
   upi_qr_image_url: "",
-  upi_auto_approve: false,
+  upi_auto_approve: true,
   upi_min_deposit: 10,
   upi_instructions: "Scan the UPI QR code using any UPI app (GPay, PhonePe, Paytm, BHIM) and enter the 12-digit UTR/Reference number below.",
 
@@ -80,10 +80,10 @@ const DEFAULT_SETTINGS: SystemSettingsMap = {
   smtp_secure: process.env.SMTP_SECURE === "true",
   smtp_user: process.env.SMTP_USER || "",
   smtp_pass: process.env.SMTP_PASS || "",
-  smtp_from_name: process.env.SMTP_FROM_NAME || "UnMaskPeople Security",
-  smtp_from_email: process.env.SMTP_FROM_EMAIL || "no-reply@unmaskpeople.in",
-  app_url: process.env.NEXT_PUBLIC_APP_URL || "https://unmaskpeople.in",
-  require_email_verification: true,
+  smtp_from_name: process.env.SMTP_FROM_NAME || "NumVerge OTP Security",
+  smtp_from_email: process.env.SMTP_FROM_EMAIL || "no-reply@numverge.com",
+  app_url: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
+  require_email_verification: false,
 };
 
 export class SettingsService {
@@ -93,9 +93,10 @@ export class SettingsService {
     // 1. Try Cloud Firestore (primary live cloud source of truth)
     try {
       const { db } = await import("@/lib/firebase");
+      const { FS_COLLECTIONS } = await import("@/lib/collections");
       if (db) {
         const { doc, getDoc } = await import("firebase/firestore");
-        const snap = await getDoc(doc(db, "system", "settings"));
+        const snap = await getDoc(doc(db, FS_COLLECTIONS.SYSTEM, FS_COLLECTIONS.SETTINGS_DOC));
         if (snap.exists()) {
           const fsData = snap.data();
           return { ...settings, ...fsData } as SystemSettingsMap;
@@ -141,12 +142,13 @@ export class SettingsService {
   }
 
   static async updateSettings(updates: Partial<SystemSettingsMap>): Promise<SystemSettingsMap> {
-    // 1. Save to Cloud Firestore
+    // 1. Save to Cloud Firestore (namespaced)
     try {
       const { db } = await import("@/lib/firebase");
+      const { FS_COLLECTIONS } = await import("@/lib/collections");
       if (db) {
         const { doc, setDoc } = await import("firebase/firestore");
-        await setDoc(doc(db, "system", "settings"), updates, { merge: true });
+        await setDoc(doc(db, FS_COLLECTIONS.SYSTEM, FS_COLLECTIONS.SETTINGS_DOC), updates, { merge: true });
       }
     } catch (fsErr) {
       console.warn("Firestore updateSettings warning:", fsErr);

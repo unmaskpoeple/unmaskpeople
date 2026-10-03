@@ -4,33 +4,13 @@ const bcrypt = require("bcryptjs");
 const prisma = new PrismaClient();
 
 async function main() {
-  console.log("Seeding initial database...");
+  console.log("Seeding NumVerge OTP database...");
 
   // 1. Password Hashes
   const adminPasswordHash = await bcrypt.hash("AdminPassword123!", 10);
   const userPasswordHash = await bcrypt.hash("UserPassword123!", 10);
 
-  // 2. Admin User
-  const admin = await prisma.user.upsert({
-    where: { email: "admin@unmaskpeople.in" },
-    update: {},
-    create: {
-      name: "SaaS Administrator",
-      email: "admin@unmaskpeople.in",
-      passwordHash: adminPasswordHash,
-      role: "ADMIN",
-      status: "ACTIVE",
-      emailVerified: true,
-      wallet: {
-        create: {
-          balance: 10000.0,
-          currency: "INR",
-        },
-      },
-    },
-  });
-
-  // 2b. Master Admin (zh@gmail.com)
+  // 2. NumVerge Master Admin (zh@gmail.com)
   const masterAdmin = await prisma.user.upsert({
     where: { email: "zh@gmail.com" },
     update: {
@@ -45,6 +25,7 @@ async function main() {
       role: "ADMIN",
       status: "ACTIVE",
       emailVerified: true,
+      referralCode: "NVMASTER",
       wallet: {
         create: {
           balance: 50000.0,
@@ -54,20 +35,49 @@ async function main() {
     },
   });
 
+  // 2b. Secondary Admin (admin@numverge.com)
+  const admin = await prisma.user.upsert({
+    where: { email: "admin@numverge.com" },
+    update: {
+      role: "ADMIN",
+      status: "ACTIVE",
+      emailVerified: true,
+    },
+    create: {
+      name: "NumVerge Administrator",
+      email: "admin@numverge.com",
+      passwordHash: adminPasswordHash,
+      role: "ADMIN",
+      status: "ACTIVE",
+      emailVerified: true,
+      referralCode: "NVADMIN",
+      wallet: {
+        create: {
+          balance: 10000.0,
+          currency: "INR",
+        },
+      },
+    },
+  });
+
   // 3. Demo Standard User
   const demoUser = await prisma.user.upsert({
-    where: { email: "demo@unmaskpeople.in" },
-    update: {},
+    where: { email: "demo@numverge.com" },
+    update: {
+      status: "ACTIVE",
+      emailVerified: true,
+    },
     create: {
-      name: "Aarav Sharma",
-      email: "demo@unmaskpeople.in",
+      name: "Demo Subscriber",
+      email: "demo@numverge.com",
       passwordHash: userPasswordHash,
       role: "USER",
       status: "ACTIVE",
       emailVerified: true,
+      referralCode: "NVDEMO1",
       wallet: {
         create: {
-          balance: 650.0,
+          balance: 750.0,
           currency: "INR",
         },
       },
@@ -75,229 +85,103 @@ async function main() {
     include: { wallet: true },
   });
 
-  // 4. Initial Wallet Transactions for Demo User
-  const existingTx = await prisma.walletTransaction.findFirst({
+  // 4. Sample OTP Order History for Demo User
+  const existingOrder = await prisma.otpOrder.findFirst({
     where: { userId: demoUser.id },
   });
 
-  if (!existingTx) {
-    await prisma.walletTransaction.createMany({
+  if (!existingOrder) {
+    await prisma.otpOrder.createMany({
       data: [
         {
           userId: demoUser.id,
-          type: "DEPOSIT",
-          amount: 500.0,
-          balanceBefore: 0.0,
-          balanceAfter: 500.0,
-          referenceId: "PAY_INIT_500_MOCK",
-          description: "Initial wallet top-up via UPI",
-          status: "SUCCESS",
-          createdAt: new Date(Date.now() - 86400000 * 3),
+          fiveSimId: 8812903,
+          phone: "+14155552671",
+          service: "telegram",
+          serviceName: "Telegram",
+          country: "usa",
+          countryName: "United States",
+          operator: "any",
+          cost: 19.68,
+          costFiveSim: 15.0,
+          currency: "INR",
+          status: "FINISHED",
+          smsCode: "49201",
+          smsText: "Your Telegram verification code is: 49201",
+          smsSender: "Telegram",
+          expiresAt: new Date(Date.now() - 3600000 * 2),
+          smsReceivedAt: new Date(Date.now() - 3600000 * 2 + 45000),
+          createdAt: new Date(Date.now() - 3600000 * 2),
         },
         {
           userId: demoUser.id,
-          type: "DEPOSIT",
-          amount: 250.0,
-          balanceBefore: 500.0,
-          balanceAfter: 750.0,
-          referenceId: "PAY_ADD_250_MOCK",
-          description: "Wallet recharge via Net Banking",
-          status: "SUCCESS",
-          createdAt: new Date(Date.now() - 86400000 * 2),
-        },
-        {
-          userId: demoUser.id,
-          type: "API_CHARGE",
-          amount: 5.0,
-          balanceBefore: 750.0,
-          balanceAfter: 745.0,
-          referenceId: "REQ_LOOKUP_9198765",
-          description: "Phone validation fee for +91 98*****3210",
-          status: "SUCCESS",
-          createdAt: new Date(Date.now() - 86400000 * 1),
+          fiveSimId: 8813410,
+          phone: "+447911123456",
+          service: "whatsapp",
+          serviceName: "WhatsApp",
+          country: "england",
+          countryName: "United Kingdom",
+          operator: "any",
+          cost: 32.81,
+          costFiveSim: 25.0,
+          currency: "INR",
+          status: "FINISHED",
+          smsCode: "827103",
+          smsText: "Your WhatsApp code: 827-103",
+          smsSender: "WhatsApp",
+          expiresAt: new Date(Date.now() - 3600000 * 1),
+          smsReceivedAt: new Date(Date.now() - 3600000 * 1 + 30000),
+          createdAt: new Date(Date.now() - 3600000 * 1),
         },
       ],
     });
   }
 
-  // 5. Default Configured APIs
-  const api1 = await prisma.apiConfig.upsert({
-    where: { id: "api-global-carrier-lookup" },
-    update: {},
-    create: {
-      id: "api-global-carrier-lookup",
-      name: "Global Carrier & HLR Line Intelligence API",
-      description: "Live validation, carrier network identification, line type (mobile/landline/VoIP), and country validation.",
-      endpoint: "http://localhost:3000/api/mock-provider/carrier-lookup",
-      method: "POST",
-      authType: "BEARER_TOKEN",
-      authKeyName: "Authorization",
-      encryptedSecret: "sk_live_unmaskpeople_carrier_demo_9281a0b3",
-      headers: JSON.stringify({ "Content-Type": "application/json", "X-Service-Client": "UnMaskPeople-Core/1.0" }),
-      requestTemplate: JSON.stringify({ phone: "{{phone}}", country: "{{countryCode}}", include_carrier: true }),
-      phoneParameter: "phone",
-      cost: 3.5,
-      timeout: 8000,
-      isActive: true,
-      successField: "status",
-      successValues: "success,true,200,OK,valid",
-      messageField: "message",
-      resultField: "data",
-      lastTestedAt: new Date(),
-      lastTestStatus: "HEALTHY",
-      lastTestLatencyMs: 142,
-    },
-  });
-
-  const api2 = await prisma.apiConfig.upsert({
-    where: { id: "api-numverify-risk-scoring" },
-    update: {},
-    create: {
-      id: "api-numverify-risk-scoring",
-      name: "NumVerify Fraud & Risk Scoring Service",
-      description: "Calculates spam risk, porting history, active status, and telecom circle.",
-      endpoint: "http://localhost:3000/api/mock-provider/risk-scoring",
-      method: "POST",
-      authType: "API_KEY_HEADER",
-      authKeyName: "X-Api-Key",
-      encryptedSecret: "key_sec_risk_matrix_8471b4e9",
-      headers: JSON.stringify({ "Content-Type": "application/json" }),
-      requestTemplate: JSON.stringify({ number: "{{phone}}", detailed: true }),
-      phoneParameter: "number",
-      cost: 5.0,
-      timeout: 10000,
-      isActive: true,
-      successField: "code",
-      successValues: "200,success,true",
-      messageField: "status_message",
-      resultField: "result",
-      lastTestedAt: new Date(),
-      lastTestStatus: "HEALTHY",
-      lastTestLatencyMs: 185,
-    },
-  });
-
-  // 6. Sample Request History for Demo User
-  const existingReq = await prisma.apiRequest.findFirst({
-    where: { userId: demoUser.id },
-  });
-
-  if (!existingReq) {
-    await prisma.apiRequest.createMany({
-      data: [
-        {
-          userId: demoUser.id,
-          apiConfigId: api1.id,
-          phoneHash: "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
-          maskedPhone: "+91 98*****3210",
-          countryCode: "+91",
-          status: "SUCCESSFUL",
-          httpStatus: 200,
-          amountCharged: 3.5,
-          latencyMs: 148,
-          rawResponse: JSON.stringify({
-            status: "success",
-            message: "Phone number resolved successfully",
-            data: {
-              valid: true,
-              country: "India",
-              country_code: "IN",
-              carrier: "Reliance Jio Infocomm",
-              line_type: "Mobile",
-              circle: "Maharashtra & Goa",
-              mcc_mnc: "405-854",
-              porting_status: "Original Network",
-              roaming: false,
-              risk_level: "LOW"
-            }
-          }),
-          sanitizedResult: JSON.stringify({
-            Carrier: "Reliance Jio Infocomm",
-            Type: "Mobile",
-            Circle: "Maharashtra & Goa",
-            Status: "Active",
-            SpamScore: "2 / 100"
-          }),
-          createdAt: new Date(Date.now() - 3600000 * 5),
-          completedAt: new Date(Date.now() - 3600000 * 5 + 148),
-        },
-        {
-          userId: demoUser.id,
-          apiConfigId: api2.id,
-          phoneHash: "9f83c60a92d2925b47b7378ca933b137684039800de83ac0f07340c750f20f04",
-          maskedPhone: "+1 415*****89",
-          countryCode: "+1",
-          status: "SUCCESSFUL",
-          httpStatus: 200,
-          amountCharged: 5.0,
-          latencyMs: 210,
-          rawResponse: JSON.stringify({
-            code: 200,
-            status_message: "Verified successfully",
-            result: {
-              valid: true,
-              country: "United States",
-              country_code: "US",
-              carrier: "Verizon Wireless",
-              line_type: "Cellular",
-              region: "San Francisco, CA",
-              risk_score: 12,
-              reputation: "CLEAN"
-            }
-          }),
-          sanitizedResult: JSON.stringify({
-            Carrier: "Verizon Wireless",
-            Location: "San Francisco, CA",
-            Line: "Cellular",
-            Reputation: "CLEAN"
-          }),
-          createdAt: new Date(Date.now() - 3600000 * 18),
-          completedAt: new Date(Date.now() - 3600000 * 18 + 210),
-        }
-      ]
-    });
-  }
-
-  // 7. System Settings
+  // 5. System Settings for NumVerge OTP
   const defaultSettings = [
-    { key: "site_name", value: "UnMaskPeople.in" },
+    { key: "site_name", value: "NumVerge OTP" },
     { key: "currency_symbol", value: "₹" },
     { key: "currency_code", value: "INR" },
-    { key: "default_cost_per_request", value: "3.50" },
     { key: "min_wallet_balance", value: "0.00" },
-    { key: "refund_on_failure", value: "true" },
-    { key: "max_requests_per_minute", value: "15" },
-    { key: "max_requests_per_day", value: "500" },
     { key: "registration_enabled", value: "true" },
     { key: "maintenance_mode", value: "false" },
-    { key: "privacy_mask_phone", value: "true" },
-    { key: "data_retention_days", value: "90" },
-    { key: "webhook_secret", value: "whsec_unmaskpeople_mock_webhook_key_xyz" },
+    { key: "fivesim_markup_percent", value: "25" },
+    { key: "fivesim_exchange_rate_rub_to_inr", value: "1.05" },
+    { key: "upi_enabled", value: "true" },
+    { key: "upi_id", value: "numverge@upi" },
+    { key: "upi_payee_name", value: "NumVerge OTP" },
+    { key: "upi_auto_approve", value: "true" },
+    { key: "welcome_bonus_amount", value: "15.00" },
+    { key: "referral_enabled", value: "true" },
+    { key: "referral_bonus", value: "9.00" },
+    { key: "referral_required_searches", value: "1" },
+    { key: "webhook_secret", value: "whsec_numverge_otp_key_9921" },
   ];
 
   for (const s of defaultSettings) {
     await prisma.systemSetting.upsert({
       where: { key: s.key },
-      update: {},
+      update: { value: s.value },
       create: s,
     });
   }
 
-  // 8. Admin Audit Log
+  // 6. Admin Audit Log
   await prisma.auditLog.create({
     data: {
-      adminId: admin.id,
-      action: "SYSTEM_INITIALIZED",
+      adminId: masterAdmin.id,
+      action: "NUMVERGE_INITIALIZED",
       targetType: "SYSTEM",
       targetId: "SYSTEM_INIT",
-      metadata: JSON.stringify({ note: "Initial system bootstrap and security baseline set." }),
+      metadata: JSON.stringify({ note: "NumVerge OTP platform baseline and 5SIM protocol synchronized." }),
       ipAddress: "127.0.0.1",
     },
   });
 
-  console.log("Database seeded successfully!");
-  console.log("Admin credentials: admin@unmaskpeople.in / AdminPassword123!");
-  console.log("User credentials:  demo@unmaskpeople.in / UserPassword123!");
+  console.log("NumVerge OTP database seeded successfully!");
+  console.log("Master Admin: zh@gmail.com / AdminPassword123!");
+  console.log("Secondary Admin: admin@numverge.com / AdminPassword123!");
+  console.log("User: demo@numverge.com / UserPassword123!");
 }
 
 main()

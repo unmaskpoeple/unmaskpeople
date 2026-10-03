@@ -22,7 +22,7 @@ import { SiteFooter } from "@/components/site-footer";
 import { useAuth } from "@/components/providers/auth-provider";
 import { useToast } from "@/components/ui/toast";
 
-export default function AdminFiveSimPage() {
+export default function AdminCarrierPage() {
   const { user } = useAuth();
   const { toast } = useToast();
 
@@ -38,7 +38,7 @@ export default function AdminFiveSimPage() {
   const fetchAdminData = async () => {
     try {
       setLoading(true);
-      const res = await fetch("/api/admin/fivesim");
+      const res = await fetch("/api/admin/carrier");
       const json = await res.json();
       if (json.success) {
         setData(json);
@@ -121,10 +121,10 @@ export default function AdminFiveSimPage() {
             </Link>
             <h1 className="text-2xl sm:text-3xl font-black text-white tracking-tight flex items-center gap-3">
               <Shield className="w-7 h-7 text-cyan-400" />
-              <span>5SIM Node & Pricing Control Center</span>
+              <span>Carrier & Pricing Control Center</span>
             </h1>
             <p className="text-xs sm:text-sm text-slate-400">
-              Live account balance telemetry, pricing markup rules, and automated fulfillment monitoring.
+              Live carrier balance telemetry, profit markup rules, and automated fulfillment monitoring.
             </p>
           </div>
 
@@ -140,45 +140,45 @@ export default function AdminFiveSimPage() {
         {loading ? (
           <div className="py-20 flex flex-col items-center justify-center gap-3">
             <Loader2 className="w-8 h-8 text-cyan-400 animate-spin" />
-            <p className="text-xs text-slate-400">Connecting to 5SIM Protocol...</p>
+            <p className="text-xs text-slate-400">Connecting to Carrier Gateway...</p>
           </div>
         ) : !data ? (
           <div className="py-16 text-center rounded-3xl bg-slate-900/40 border border-slate-800 p-8 space-y-3">
             <AlertCircle className="w-10 h-10 text-rose-400 mx-auto" />
             <h3 className="text-base font-bold text-white">Administrator Access Required</h3>
             <p className="text-xs text-slate-400 max-w-sm mx-auto">
-              You must be logged in as an administrator to manage wholesale supplier connections.
+              You must be logged in as an administrator to manage carrier gateway connections.
             </p>
           </div>
         ) : (
           <div className="space-y-8">
-            {/* 1. 5SIM LIVE TELEMETRY CARDS */}
+            {/* 1. CARRIER GATEWAY TELEMETRY CARDS */}
             <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-4 gap-4">
-              {/* 5SIM Account Balance */}
+              {/* Carrier Account Balance */}
               <div className="p-5 rounded-3xl bg-slate-900/80 border border-cyan-500/40 shadow-lg shadow-cyan-500/5 space-y-2">
                 <div className="flex items-center justify-between text-xs text-slate-400">
-                  <span>5SIM Live Balance</span>
+                  <span>Carrier Reserve Balance</span>
                   <Radio className="w-4 h-4 text-emerald-400 animate-pulse" />
                 </div>
                 <div className="text-3xl font-black text-white">
                   ${data.profile?.balance?.toFixed(2) ?? "0.00"} USD
                 </div>
                 <div className="text-[11px] text-emerald-400 font-medium">
-                  ● Connected to {data.profile?.email || "5sim.net"}
+                  ● Gateway Link Active
                 </div>
               </div>
 
-              {/* 5SIM Reliability Rating */}
+              {/* Carrier Reliability Rating */}
               <div className="p-5 rounded-3xl bg-slate-900/80 border border-slate-800 space-y-2">
                 <div className="flex items-center justify-between text-xs text-slate-400">
-                  <span>Supplier Rating</span>
+                  <span>Carrier Reliability</span>
                   <TrendingUp className="w-4 h-4 text-cyan-400" />
                 </div>
                 <div className="text-3xl font-black text-cyan-400">
                   {data.profile?.rating ?? 100}%
                 </div>
                 <div className="text-[11px] text-slate-400">
-                  Protocol ID: #{data.profile?.id || "551353"}
+                  Carrier Node Ref: #{data.profile?.id || "Active"}
                 </div>
               </div>
 
@@ -206,7 +206,7 @@ export default function AdminFiveSimPage() {
                   ₹{Number(data.stats?.revenueInr ?? 0).toFixed(2)}
                 </div>
                 <div className="text-[11px] text-slate-400">
-                  Wholesale Cost: ${Number(data.stats?.costFiveSimUsd ?? 0).toFixed(2)} USD
+                  Wholesale Cost: ${Number(data.stats?.costCarrierUsd ?? 0).toFixed(2)} USD
                 </div>
               </div>
             </div>

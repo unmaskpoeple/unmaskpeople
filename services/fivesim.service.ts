@@ -1,7 +1,8 @@
 import prisma from "@/lib/prisma";
 import { formatServiceName, formatCountryName, getCountryFlag } from "@/lib/fivesim-catalog";
 
-const FIVESIM_BASE_URL = "https://5sim.net/v1";
+const CARRIER_API_BASE = "https://5sim.net/v1";
+const FIVESIM_BASE_URL = CARRIER_API_BASE;
 
 export interface FiveSimProfile {
   id: number;
@@ -77,6 +78,38 @@ export class FiveSimService {
     let minPriceUsd = Number(process.env.MIN_PRICE_USD ?? 0.15);
     let exchangeRateInr = Number(process.env.EXCHANGE_RATE_INR ?? 86.5);
 
+    // 1. Try Cloud Firestore (Primary online cloud configuration - strictly namespaced)
+    try {
+      const { db } = await import("@/lib/firebase");
+      const { FS_COLLECTIONS } = await import("@/lib/collections");
+      if (db) {
+        const { doc, getDoc } = await import("firebase/firestore");
+        const snap = await getDoc(doc(db, FS_COLLECTIONS.PRICING, "fivesim_pricing"));
+        if (snap.exists()) {
+          const fsData = snap.data();
+          if (fsData.markupPercent !== undefined && !isNaN(Number(fsData.markupPercent))) {
+            markupPercent = Number(fsData.markupPercent);
+          }
+          if (fsData.minPriceUsd !== undefined && !isNaN(Number(fsData.minPriceUsd))) {
+            minPriceUsd = Number(fsData.minPriceUsd);
+          }
+          if (fsData.exchangeRateInr !== undefined && !isNaN(Number(fsData.exchangeRateInr))) {
+            exchangeRateInr = Number(fsData.exchangeRateInr);
+          }
+          pricingConfigCache = {
+            markupPercent,
+            minPriceUsd,
+            exchangeRateInr,
+            expiresAt: now + 30_000,
+          };
+          return pricingConfigCache;
+        }
+      }
+    } catch (fsPricingErr) {
+      // Continue to Prisma fallback
+    }
+
+    // 2. Try Prisma fallback
     try {
       const settingRows = await prisma.systemSetting.findMany({
         where: {
@@ -108,7 +141,7 @@ export class FiveSimService {
   }
 
   /**
-   * Calculate customer prices from wholesale 5SIM cost
+   * Calculate customer prices from wholesale carrier cost
    */
   static calculateCustomerPrice(wholesaleCostUsd: number, markupPercent: number, minPriceUsd: number, exchangeRateInr: number) {
     const wholesale = Number(wholesaleCostUsd) || 0.10;
@@ -125,7 +158,7 @@ export class FiveSimService {
   }
 
   /**
-   * Fetch 5SIM account profile and live balance
+   * Fetch carrier account profile and live balance
    */
   static async getProfile(): Promise<FiveSimProfile> {
     const apiKey = this.getApiKey();
@@ -139,7 +172,7 @@ export class FiveSimService {
 
     if (!res.ok) {
       const errText = await res.text();
-      throw new Error(`5SIM Profile Request failed (${res.status}): ${errText}`);
+      throw new Error(`Carrier Profile Request failed (${res.status}): ${errText}`);
     }
 
     const data = await res.json();
@@ -172,7 +205,7 @@ export class FiveSimService {
     });
 
     if (!res.ok) {
-      throw new Error(`Failed to fetch countries from 5SIM: ${res.status}`);
+      throw new Error(`Failed to fetch countries from carrier network: ${res.status}`);
     }
 
     const data: Record<string, any> = await res.json();
@@ -242,7 +275,7 @@ export class FiveSimService {
 
     if (!res.ok) {
       const errText = await res.text();
-      throw new Error(`Failed to fetch 5SIM products (${res.status}): ${errText}`);
+      throw new Error(`Failed to fetch carrier products (${res.status}): ${errText}`);
     }
 
     const raw: Record<string, { Category: string; Qty: number; Price: number }> = await res.json();
@@ -373,7 +406,7 @@ export class FiveSimService {
   }
 
   /**
-   * Cancel order and refund wholesale cost back on 5SIM
+   * Cancel order and refund wholesale cost back to carrier
    */
   static async cancelOrder(orderId: number | string): Promise<FiveSimOrderResponse> {
     const apiKey = this.getApiKey();
@@ -397,7 +430,7 @@ export class FiveSimService {
   }
 
   /**
-   * Ban bad/burned number on 5SIM
+   * Ban bad/burned number on carrier
    */
   static async banOrder(orderId: number | string): Promise<FiveSimOrderResponse> {
     const apiKey = this.getApiKey();

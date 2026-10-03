@@ -13,8 +13,9 @@ export async function GET(req: NextRequest) {
 
     if (db) {
       try {
+        const { FS_COLLECTIONS } = await import("@/lib/collections");
         const q = query(
-          collection(db, "upi_deposits"),
+          collection(db, FS_COLLECTIONS.UPI_DEPOSITS),
           where("userId", "==", sessionUser.id),
           limit(20)
         );

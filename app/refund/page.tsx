@@ -52,7 +52,7 @@ export default function RefundPage() {
               <span>Automated Zero-Loss Failure Guarantee</span>
             </div>
             <p className="text-xs leading-relaxed">
-              Subscribers never pay for failed or unreachable queries. If an external telecom carrier times out or an upstream database is unreachable, our database transaction rollback mechanism instantly restores the reserved fee back to your prepaid wallet balance within milliseconds.
+              Subscribers never pay for failed or unreceived SMS codes. If an upstream virtual number times out without receiving an SMS verification code within the order window, our automated refund mechanism instantly restores the reserved fee back to your prepaid wallet balance within milliseconds.
             </p>
           </div>
 
@@ -61,20 +61,20 @@ export default function RefundPage() {
               1. Overview of Billing Model
             </h2>
             <p>
-              UnMaskPeople.in provides cloud-based digital software services and APIs. All lookups and verification queries are billed dynamically against your user account's prepaid wallet balance in Indian Rupees (INR).
+              NumVerge OTP provides cloud-based virtual number and SMS verification services. All virtual numbers and SMS verification requests are billed dynamically against your user account's prepaid wallet balance in Indian Rupees (INR).
             </p>
           </section>
 
           <section className="space-y-3">
             <h2 className="text-base sm:text-lg font-bold text-white flex items-center gap-2">
-              2. Failed Searches & Instant Restorations
+              2. Failed Orders & Instant Restorations
             </h2>
             <p>
-              When a phone, vehicle, or identity search request is initiated:
+              When a virtual number is rented for SMS verification:
             </p>
             <ul className="list-disc pl-5 space-y-1.5 text-slate-400">
-              <li><strong>Successful Queries:</strong> If the external carrier or registry delivers the requested telemetry, the query cost is finalized.</li>
-              <li><strong>Failed Queries / Upstream Downtime:</strong> If the provider returns a network error, timeout, or invalid response, the transaction is marked as <code>REFUNDED</code> and the reserved amount is credited back to your wallet balance automatically.</li>
+              <li><strong>Successful Activations:</strong> When the incoming SMS OTP code is received and verified, the activation cost is finalized.</li>
+              <li><strong>Cancelled / Expired Numbers:</strong> If you cancel the order before SMS arrival, or if the order times out (15-20 mins) without receiving an SMS, the order is marked as <code>CANCELED</code> or <code>TIMEOUT</code> and the reserved amount is credited back to your wallet balance automatically.</li>
             </ul>
           </section>
 
@@ -83,11 +83,11 @@ export default function RefundPage() {
               3. UPI Top-Up Reconciliation & Disputed Transfers
             </h2>
             <p>
-              If money was debited from your bank account or UPI app during a wallet top-up but failed to reflect in your UnMaskPeople.in wallet:
+              If money was debited from your bank account or UPI app during a wallet top-up but failed to reflect in your NumVerge OTP wallet:
             </p>
             <ul className="list-disc pl-5 space-y-1.5 text-slate-400">
               <li><strong>UTR Verification:</strong> Ensure you entered the correct 12-digit UPI UTR / Reference number from your payment app (Google Pay, PhonePe, Paytm, or BHIM).</li>
-              <li><strong>Manual Support Escalation:</strong> If your account has not been credited after submitting your UTR, email us at <code className="text-cyan-400">billing@unmaskpeople.in</code> with your 12-digit UPI Reference / UTR number and payment screenshot. Our team will verify the payment and credit your wallet promptly.</li>
+              <li><strong>Manual Support Escalation:</strong> If your account has not been credited after submitting your UTR, email us at <code className="text-cyan-400">billing@numverge.com</code> with your 12-digit UPI Reference / UTR number and payment screenshot. Our team will verify the payment and credit your wallet promptly.</li>
               <li><strong>Timeline:</strong> Bank reconciliation is typically completed within <strong>2 to 4 business hours</strong>.</li>
             </ul>
           </section>
@@ -97,7 +97,7 @@ export default function RefundPage() {
               4. Cancellation Policy
             </h2>
             <p>
-              As UnMaskPeople.in is a prepaid pay-as-you-go service without recurring subscription lock-ins, there are no recurring monthly charges to cancel. You may stop using the service at any time without incurring cancellation fees.
+              As NumVerge OTP is a prepaid pay-as-you-go service without recurring subscription lock-ins, there are no recurring monthly charges to cancel. You may stop using the service at any time without incurring cancellation fees.
             </p>
             <p>
               Unutilized promotional credits (such as the ₹15.00 welcome bonus or referral bonuses) have no cash value and cannot be withdrawn to external bank accounts.
@@ -112,8 +112,8 @@ export default function RefundPage() {
               To report any billing discrepancies or request manual assistance, please contact:
             </p>
             <div className="p-4 rounded-2xl bg-slate-950 border border-slate-800 font-mono text-xs space-y-1 text-slate-300">
-              <p><strong>Department:</strong> Billing & Payments Redressal, UnMaskPeople.in</p>
-              <p><strong>Email:</strong> billing@unmaskpeople.in</p>
+              <p><strong>Department:</strong> Billing & Payments Redressal, NumVerge OTP</p>
+              <p><strong>Email:</strong> billing@numverge.com</p>
               <p><strong>Average Response Time:</strong> Within 12-24 hours</p>
             </div>
           </section>

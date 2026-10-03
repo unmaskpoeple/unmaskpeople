@@ -1,6 +1,7 @@
 import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/jwt";
 import { db } from "@/lib/firebase";
+import { FS_COLLECTIONS } from "@/lib/collections";
 import { collection, getDocs, limit } from "firebase/firestore";
 import prisma from "@/lib/prisma";
 
@@ -13,7 +14,7 @@ export async function GET(req: NextRequest) {
 
     if (db) {
       try {
-        const snap = await getDocs(collection(db, "upi_deposits"));
+        const snap = await getDocs(collection(db, FS_COLLECTIONS.UPI_DEPOSITS));
         snap.forEach((doc) => {
           deposits.push(doc.data());
         });

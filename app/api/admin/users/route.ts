@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { requireAdmin } from "@/lib/jwt";
 import prisma from "@/lib/prisma";
 import { db } from "@/lib/firebase";
+import { FS_COLLECTIONS } from "@/lib/collections";
 import { collection, getDocs } from "firebase/firestore";
 
 export async function GET(req: NextRequest) {
@@ -16,10 +17,10 @@ export async function GET(req: NextRequest) {
     const limit = parseInt(searchParams.get("limit") || "15", 10);
     const skip = (page - 1) * limit;
 
-    // 1. Try Cloud Firestore (online cloud database)
+    // 1. Try Cloud Firestore (online cloud database - namespaced to NumVerge)
     if (db) {
       try {
-        const querySnapshot = await getDocs(collection(db, "users"));
+        const querySnapshot = await getDocs(collection(db, FS_COLLECTIONS.USERS));
         const fsUsers: any[] = [];
         querySnapshot.forEach((doc) => {
           const data = doc.data();
@@ -35,7 +36,7 @@ export async function GET(req: NextRequest) {
               balance: Number(data.walletBalance ?? 0.0),
               currency: "INR",
             },
-            _count: { apiRequests: 0, walletTransactions: 0 },
+            _count: { otpOrders: 0, walletTransactions: 0 },
           });
         });
 
@@ -91,7 +92,7 @@ export async function GET(req: NextRequest) {
             },
             _count: {
               select: {
-                apiRequests: true,
+                otpOrders: true,
                 walletTransactions: true,
               },
             },
@@ -124,7 +125,7 @@ export async function GET(req: NextRequest) {
           emailVerified: true,
           createdAt: new Date().toISOString(),
           wallet: { balance: 10000, currency: "INR" },
-          _count: { apiRequests: 0, walletTransactions: 0 },
+          _count: { otpOrders: 0, walletTransactions: 0 },
         },
       ],
       total: 1,

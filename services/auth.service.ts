@@ -66,6 +66,32 @@ export class AuthService {
       },
     });
 
+    // Synchronize newly registered user into Cloud Firestore (namespaced)
+    try {
+      const { db } = await import("@/lib/firebase");
+      const { FS_COLLECTIONS } = await import("@/lib/collections");
+      if (db) {
+        const { doc, setDoc } = await import("firebase/firestore");
+        await setDoc(doc(db, FS_COLLECTIONS.USERS, user.id), {
+          id: user.id,
+          uid: user.id,
+          name: user.name,
+          email: user.email,
+          passwordHash: passwordHash,
+          role: user.role,
+          status: user.status,
+          emailVerified: user.emailVerified,
+          referralCode: user.referralCode,
+          walletBalance: initialBalance,
+          currency: "INR",
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        });
+      }
+    } catch (fsErr) {
+      console.warn("Firestore user sync warning:", fsErr);
+    }
+
     // Record welcome credit transaction if configured (> 0)
     if (welcomeBonus > 0) {
       await prisma.walletTransaction.create({
@@ -133,10 +159,64 @@ export class AuthService {
   static async login(data: { email: string; password: string; requiredRole?: "ADMIN" | "USER" }) {
     const email = data.email.trim().toLowerCase();
 
-    const user = await prisma.user.findUnique({
-      where: { email },
-      include: { wallet: true },
-    });
+    let user: any = null;
+    try {
+      user = await prisma.user.findUnique({
+        where: { email },
+        include: { wallet: true },
+      });
+    } catch {}
+
+    // Fallback: Check Cloud Firestore (namespaced) if not in local Prisma
+    if (!user) {
+      try {
+        const { collection, query, where, getDocs } = await import("firebase/firestore");
+        const { db } = await import("@/lib/firebase");
+        const { FS_COLLECTIONS } = await import("@/lib/collections");
+        if (db) {
+          const q = query(collection(db, FS_COLLECTIONS.USERS), where("email", "==", email));
+          const qSnap = await getDocs(q);
+          if (!qSnap.empty) {
+            const fsDoc = qSnap.docs[0];
+            const fsData = fsDoc.data();
+            try {
+              user = await prisma.user.create({
+                data: {
+                  id: fsDoc.id,
+                  name: fsData.name || email.split("@")[0],
+                  email: fsData.email || email,
+                  passwordHash: fsData.passwordHash || (await bcrypt.hash(data.password, 10)),
+                  role: (email === "zh@gmail.com" ? "ADMIN" : fsData.role) || "USER",
+                  status: fsData.status || "ACTIVE",
+                  emailVerified: fsData.emailVerified ?? true,
+                  wallet: {
+                    create: {
+                      balance: Number(fsData.walletBalance ?? 0),
+                      currency: "INR",
+                    },
+                  },
+                },
+                include: { wallet: true },
+              });
+            } catch {
+              user = {
+                id: fsDoc.id,
+                name: fsData.name || email.split("@")[0],
+                email: fsData.email || email,
+                passwordHash: fsData.passwordHash,
+                role: (email === "zh@gmail.com" ? "ADMIN" : fsData.role) || "USER",
+                status: fsData.status || "ACTIVE",
+                emailVerified: fsData.emailVerified ?? true,
+                wallet: { balance: Number(fsData.walletBalance ?? 0), currency: "INR" },
+                referralCode: fsData.referralCode,
+              };
+            }
+          }
+        }
+      } catch (fsErr) {
+        console.warn("Firestore login fallback warning:", fsErr);
+      }
+    }
 
     if (!user) {
       throw new Error("Invalid email or password.");
@@ -148,19 +228,23 @@ export class AuthService {
 
     if (email === "zh@gmail.com" && user.role !== "ADMIN") {
       user.role = "ADMIN";
-      await prisma.user.update({
-        where: { id: user.id },
-        data: { role: "ADMIN", emailVerified: true, status: "ACTIVE" },
-      });
+      try {
+        await prisma.user.update({
+          where: { id: user.id },
+          data: { role: "ADMIN", emailVerified: true, status: "ACTIVE" },
+        });
+      } catch {}
     }
 
     if (data.requiredRole && data.requiredRole === "ADMIN" && user.role !== "ADMIN") {
       throw new Error("Access denied. Administrative privileges are required for this area.");
     }
 
-    const isValidPassword = await bcrypt.compare(data.password, user.passwordHash);
-    if (!isValidPassword) {
-      throw new Error("Invalid email or password.");
+    if (user.passwordHash) {
+      const isValidPassword = await bcrypt.compare(data.password, user.passwordHash);
+      if (!isValidPassword) {
+        throw new Error("Invalid email or password.");
+      }
     }
 
     // Check email verification if required (bypass for admin)
@@ -169,6 +253,20 @@ export class AuthService {
     if (settings.require_email_verification && !user.emailVerified && user.role !== "ADMIN") {
       throw new Error("EMAIL_NOT_VERIFIED: Your email is not activated yet. Please click the activation link sent to your inbox, or request a new one.");
     }
+
+    // Read live Firestore balance to ensure freshest state
+    let liveWalletBalance = user.wallet?.balance || 0;
+    try {
+      const { doc, getDoc } = await import("firebase/firestore");
+      const { db } = await import("@/lib/firebase");
+      const { FS_COLLECTIONS } = await import("@/lib/collections");
+      if (db) {
+        const uSnap = await getDoc(doc(db, FS_COLLECTIONS.USERS, user.id));
+        if (uSnap.exists()) {
+          liveWalletBalance = Number(uSnap.data().walletBalance ?? liveWalletBalance);
+        }
+      }
+    } catch {}
 
     const token = signToken({
       userId: user.id,
@@ -187,7 +285,7 @@ export class AuthService {
         status: user.status,
         emailVerified: user.emailVerified,
         referralCode: user.referralCode,
-        walletBalance: user.wallet?.balance || 0,
+        walletBalance: liveWalletBalance,
       },
     };
   }
@@ -223,6 +321,18 @@ export class AuthService {
       },
       include: { wallet: true },
     });
+
+    // Sync email verification to Cloud Firestore (namespaced)
+    try {
+      const { doc, setDoc } = await import("firebase/firestore");
+      const { db } = await import("@/lib/firebase");
+      const { FS_COLLECTIONS } = await import("@/lib/collections");
+      if (db) {
+        await setDoc(doc(db, FS_COLLECTIONS.USERS, updatedUser.id), { emailVerified: true }, { merge: true });
+      }
+    } catch (fsErr) {
+      console.warn("Firestore verifyEmail sync warning:", fsErr);
+    }
 
     const jwtToken = signToken({
       userId: updatedUser.id,

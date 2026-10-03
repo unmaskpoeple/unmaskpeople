@@ -10,8 +10,8 @@ export async function GET(req: NextRequest) {
     return NextResponse.json({
       success: true,
       upi_enabled: settings.upi_enabled !== false,
-      upi_id: settings.upi_id || "unmaskpeople@upi",
-      upi_payee_name: settings.upi_payee_name || "UnMaskPeople",
+      upi_id: settings.upi_id || "numverge@upi",
+      upi_payee_name: settings.upi_payee_name || "NumVerge OTP",
       upi_qr_image_url: settings.upi_qr_image_url || "",
       upi_auto_approve: settings.upi_auto_approve === true,
       upi_min_deposit: Number(settings.upi_min_deposit ?? 10),
