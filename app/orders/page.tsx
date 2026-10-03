@@ -174,9 +174,9 @@ export default function MyOrdersPage() {
           </div>
         ) : (
           <div className="space-y-4">
-            {/* If any are PENDING, display full active card */}
+            {/* If any are truly active PENDING and unexpired, display active card */}
             {filteredOrders
-              .filter((o) => o.status === "PENDING")
+              .filter((o) => o.status === "PENDING" && new Date(o.expiresAt).getTime() > Date.now())
               .map((ord) => (
                 <ActiveOtpCard
                   key={ord.id}
@@ -194,7 +194,7 @@ export default function MyOrdersPage() {
                 />
               ))}
 
-            {/* Non-pending orders list in clean table view */}
+            {/* Non-pending or expired orders list in clean table view */}
             <div className="rounded-3xl bg-slate-900/60 border border-slate-800 overflow-hidden shadow-xl">
               <div className="overflow-x-auto">
                 <table className="w-full text-left text-xs text-slate-300">
@@ -210,7 +210,7 @@ export default function MyOrdersPage() {
                   </thead>
                   <tbody className="divide-y divide-slate-800/60">
                     {filteredOrders
-                      .filter((o) => o.status !== "PENDING")
+                      .filter((o) => o.status !== "PENDING" || new Date(o.expiresAt).getTime() <= Date.now())
                       .map((ord) => (
                         <tr key={ord.id} className="hover:bg-slate-800/30 transition">
                           <td className="py-4 px-4">

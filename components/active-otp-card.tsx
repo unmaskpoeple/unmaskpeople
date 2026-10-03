@@ -1,6 +1,6 @@
 "use client";
 
-import React, { useState, useEffect, useCallback } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import {
   Copy,
   Check,
@@ -59,6 +59,9 @@ export function ActiveOtpCard({
   const [timeLeft, setTimeLeft] = useState<string>("20:00");
   const [isExpired, setIsExpired] = useState(false);
 
+  // Prevent duplicate expiry triggers and infinite toast loops
+  const hasHandledExpiryRef = useRef(false);
+
   // Sync prop changes
   useEffect(() => {
     setOrder(initialOrder);
@@ -66,8 +69,6 @@ export function ActiveOtpCard({
 
   // Countdown timer
   useEffect(() => {
-    let hasDismissed = false;
-
     const updateCountdown = () => {
       const expiry = new Date(order.expiresAt).getTime();
       const now = Date.now();
@@ -76,21 +77,15 @@ export function ActiveOtpCard({
       if (diff <= 0) {
         setTimeLeft("00:00");
         setIsExpired(true);
-        if (!hasDismissed && order.status === "PENDING") {
-          hasDismissed = true;
-          // Notify backend check to ensure refund is registered
-          fetch(`/api/otp/check?orderId=${order.id}&fiveSimId=${order.fiveSimId}`).catch(() => {});
-          toast({
-            title: "Order Expired",
-            description: "Time limit reached. 100% refunded to your wallet.",
-            variant: "info",
-          });
-          onOrderUpdated?.({ ...order, status: "TIMEOUT" });
-          refreshUser();
-          // Automatically remove from home screen
-          setTimeout(() => {
+        if (!hasHandledExpiryRef.current) {
+          hasHandledExpiryRef.current = true;
+          if (order.status === "PENDING") {
+            // Quietly trigger refund check on backend
+            fetch(`/api/otp/check?orderId=${order.id}&fiveSimId=${order.fiveSimId}`).catch(() => {});
+            onOrderUpdated?.({ ...order, status: "TIMEOUT" });
+            // Immediately dismiss card so it disappears cleanly from active view
             onOrderDismiss?.(order.id);
-          }, 1500);
+          }
         }
       } else {
         const minutes = Math.floor(diff / (1000 * 60));
@@ -104,11 +99,11 @@ export function ActiveOtpCard({
     updateCountdown();
     const interval = setInterval(updateCountdown, 1000);
     return () => clearInterval(interval);
-  }, [order.expiresAt, order.id, order.fiveSimId, order.status, onOrderDismiss, onOrderUpdated, refreshUser, toast]);
+  }, [order.expiresAt, order.id, order.fiveSimId, order.status, onOrderDismiss, onOrderUpdated]);
 
   // Polling for incoming SMS if status is PENDING
   const pollStatus = useCallback(async () => {
-    if (order.status !== "PENDING" || isExpired) return;
+    if (order.status !== "PENDING" || isExpired || hasHandledExpiryRef.current) return;
 
     try {
       const res = await fetch(`/api/otp/check?orderId=${order.id}&fiveSimId=${order.fiveSimId}`);
@@ -120,17 +115,16 @@ export function ActiveOtpCard({
 
           if (data.smsReceived) {
             toast.success("🎉 SMS Code Received!", `Verification code for ${data.order.serviceName}: ${data.order.smsCode}`);
-            // Try to trigger a notification sound
             try {
               const audio = new Audio("https://assets.mixkit.co/active_storage/sfx/2869/2869-preview.mp3");
               audio.play().catch(() => {});
             } catch {}
           } else if (data.autoRefunded || data.order.status === "TIMEOUT" || data.order.status === "CANCELED") {
-            toast.info("Order Expired", "No SMS was received in time. Your wallet has been 100% refunded.");
-            refreshUser();
-            setTimeout(() => {
+            if (!hasHandledExpiryRef.current) {
+              hasHandledExpiryRef.current = true;
+              refreshUser();
               onOrderDismiss?.(order.id);
-            }, 1500);
+            }
           }
         }
       }
