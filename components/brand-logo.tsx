@@ -53,8 +53,15 @@ export function BrandLogo({
           <span className="bg-gradient-to-r from-cyan-400 via-sky-400 to-indigo-400 bg-clip-text text-transparent">
             Verge
           </span>
-          <span className="ml-1 text-[9px] sm:text-[10px] uppercase tracking-wider font-extrabold px-1.5 py-0.5 rounded bg-cyan-950/90 border border-cyan-500/40 text-cyan-300">
-            OTP
+          <span className="relative inline-flex items-center justify-center p-[1.5px] rounded-md overflow-hidden ml-1.5 neon-otp-glow">
+            {/* Moving Neon Light Border */}
+            <span className="absolute -inset-[200%] animate-neon-border bg-[conic-gradient(from_0deg_at_50%_50%,transparent_0%,transparent_50%,#06b6d4_70%,#38bdf8_85%,#ffffff_100%)] pointer-events-none" />
+            
+            {/* Inner Badge */}
+            <span className="relative z-10 px-1.5 py-0.5 rounded-[5px] bg-[#030712] text-[9px] sm:text-[10px] uppercase tracking-wider font-black text-cyan-300 flex items-center gap-1">
+              <span className="w-1.5 h-1.5 rounded-full bg-cyan-400 animate-pulse shadow-[0_0_6px_#22d3ee]" />
+              <span>OTP</span>
+            </span>
           </span>
         </div>
         {showSubtitle && (
